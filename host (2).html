@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Footy Legends Pub — Host</title>
+<style>
+  :root { --bg:#0a0f0a; --panel:#0f1710; --gold:#e9c46a; --green:#39d353; --text:#d8d8d8; --dim:#8a8576; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Courier New",monospace; padding:24px; }
+  h1 { color:var(--gold); letter-spacing:2px; font-size:18px; margin:0 0 4px; }
+  .sub { color:var(--dim); font-size:12px; margin-bottom:24px; }
+  button { background:var(--gold); color:#111; border:0; padding:14px 22px; font-family:inherit; font-size:15px; letter-spacing:2px; cursor:pointer; border-radius:6px; }
+  .code { font-size:64px; letter-spacing:12px; color:var(--gold); font-weight:bold; margin:8px 0; }
+  .card { background:var(--panel); border:1px solid #223; border-radius:10px; padding:24px; max-width:520px; }
+  #qr { background:#fff; padding:12px; border-radius:8px; display:inline-block; margin-top:12px; min-height:40px; }
+  #qr img { display:block; }
+  .teams { margin-top:24px; }
+  .team { background:#132013; border:1px solid #2a4; border-radius:8px; padding:12px 16px; margin-bottom:8px; font-size:16px; }
+  .count { color:var(--green); letter-spacing:2px; font-size:13px; margin-bottom:8px; }
+  .hint { color:var(--dim); font-size:12px; margin-top:16px; line-height:1.6; word-break:break-all; }
+</style>
+</head>
+<body>
+  <h1>FOOTY LEGENDS · HOST</h1>
+  <div class="sub">Spine test — create a room, let phones join.</div>
+
+  <div id="start" class="card">
+    <button id="newgame">NEW GAME</button>
+    <div class="hint">Click to create a room. A code + QR will appear. Phones scan the QR (or open the link) to join.</div>
+  </div>
+
+  <div id="live" class="card" style="display:none">
+    <div class="sub">ROOM CODE</div>
+    <div id="code" class="code"></div>
+    <div id="qr"></div>
+    <div class="teams">
+      <div id="count" class="count">TEAMS · 0</div>
+      <div id="teamlist"></div>
+    </div>
+    <div class="hint" id="joinlink"></div>
+    <div class="hint">&#9888; Phones must join THIS code. Clicking NEW GAME again starts a fresh, empty room.</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ===== CONFIG (same three lines in host / join / display) =====
+    const SUPABASE_URL = "https://wrvbpxeuadalnflfygtk.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_DGcYVJ4eJWbrqmNSgyRQtA_49yrqbnp";
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // ===== helpers =====
+    function baseUrl(){ return location.origin + location.pathname.replace(/\/[^\/]*$/, ""); }
+    function makeCode(){ const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s=""; for(let i=0;i<4;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+    function safe(t){ const d=document.createElement("div"); d.textContent = t==null ? "" : String(t); return d.innerHTML; }
+
+    let roomId = null;
+    document.getElementById("newgame").onclick = createRoom;
+
+    async function createRoom(){
+      const code = makeCode();
+      const { data, error } = await db.from("rooms").insert({ code: code, status: "lobby" }).select().single();
+      if (error){ alert("Could not create room: " + error.message); return; }
+      roomId = data.id;
+
+      document.getElementById("start").style.display = "none";
+      document.getElementById("live").style.display = "block";
+      document.getElementById("code").textContent = code;
+
+      const link = baseUrl() + "/join.html?room=" + code;
+      document.getElementById("joinlink").textContent = link;
+      try {
+        const img = document.createElement("img");
+        img.width = 220; img.height = 220; img.alt = "QR to join";
+        img.src = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(link);
+        document.getElementById("qr").appendChild(img);
+      } catch(e){}
+
+      loadTeams();
+      try {
+        db.channel("host-" + roomId)
+          .on("postgres_changes", { event:"INSERT", schema:"public", table:"teams", filter:"room_id=eq."+roomId }, function(){ loadTeams(); })
+          .subscribe();
+      } catch(e){}
+      setInterval(loadTeams, 2000);
+    }
+
+    async function loadTeams(){
+      if (!roomId) return;
+      const { data } = await db.from("teams").select("*").eq("room_id", roomId).order("created_at");
+      const list = document.getElementById("teamlist");
+      list.innerHTML = "";
+      (data || []).forEach(function(t){
+        const el = document.createElement("div");
+        el.className = "team";
+        el.innerHTML = "\u2713 " + safe(t.name);
+        list.appendChild(el);
+      });
+      document.getElementById("count").textContent = "TEAMS \u00b7 " + (data ? data.length : 0);
+    }
+  </script>
+</body>
+</html>

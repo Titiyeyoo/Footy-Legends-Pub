@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Footy Legends Pub — Display</title>
+<style>
+  :root { --bg:#0a0f0a; --gold:#e9c46a; --green:#39d353; --text:#d8d8d8; --dim:#8a8576; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Courier New",monospace; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
+  h1 { color:var(--gold); letter-spacing:4px; font-size:22px; margin:0 0 24px; }
+  .row { display:flex; gap:48px; align-items:center; flex-wrap:wrap; justify-content:center; }
+  .code { font-size:96px; letter-spacing:16px; color:var(--gold); font-weight:bold; }
+  #qr { background:#fff; padding:16px; border-radius:10px; }
+  #qr img { display:block; }
+  .teams { margin-top:40px; width:100%; max-width:800px; }
+  .count { color:var(--green); letter-spacing:3px; text-align:center; margin-bottom:16px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+  .team { background:#132013; border:1px solid #2a4; border-radius:10px; padding:18px; font-size:22px; text-align:center; }
+  .scan { color:var(--dim); font-size:14px; text-align:center; margin-top:12px; }
+</style>
+</head>
+<body>
+  <h1>FOOTY LEGENDS</h1>
+  <div class="row">
+    <div style="text-align:center">
+      <div class="scan">SCAN TO JOIN</div>
+      <div id="qr"></div>
+    </div>
+    <div style="text-align:center">
+      <div class="scan">ROOM CODE</div>
+      <div id="code" class="code">----</div>
+    </div>
+  </div>
+
+  <div class="teams">
+    <div id="count" class="count">TEAMS · 0</div>
+    <div id="grid" class="grid"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ===== CONFIG (same three lines in host / join / display) =====
+    const SUPABASE_URL = "https://wrvbpxeuadalnflfygtk.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_DGcYVJ4eJWbrqmNSgyRQtA_49yrqbnp";
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // ===== helpers =====
+    function qp(n){ return new URLSearchParams(location.search).get(n); }
+    function baseUrl(){ return location.origin + location.pathname.replace(/\/[^\/]*$/, ""); }
+    function safe(t){ const d=document.createElement("div"); d.textContent = t==null ? "" : String(t); return d.innerHTML; }
+
+    const code = (qp("room") || "").toUpperCase();
+    let roomId = null;
+
+    (async function(){
+      if (!code){ document.getElementById("code").textContent = "????"; return; }
+      const { data } = await db.from("rooms").select("*").eq("code", code).single();
+      if (!data){ document.getElementById("code").textContent = "????"; return; }
+      roomId = data.id;
+      document.getElementById("code").textContent = code;
+
+      const link = baseUrl() + "/join.html?room=" + code;
+      try {
+        const img = document.createElement("img");
+        img.width = 240; img.height = 240; img.alt = "QR to join";
+        img.src = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + encodeURIComponent(link);
+        document.getElementById("qr").appendChild(img);
+      } catch(e){}
+
+      loadTeams();
+      try {
+        db.channel("display-" + roomId)
+          .on("postgres_changes", { event:"INSERT", schema:"public", table:"teams", filter:"room_id=eq."+roomId }, function(){ loadTeams(); })
+          .subscribe();
+      } catch(e){}
+      setInterval(loadTeams, 2000);
+    })();
+
+    async function loadTeams(){
+      if (!roomId) return;
+      const { data } = await db.from("teams").select("*").eq("room_id", roomId).order("created_at");
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+      (data || []).forEach(function(t){
+        const el = document.createElement("div");
+        el.className = "team";
+        el.innerHTML = safe(t.name);
+        grid.appendChild(el);
+      });
+      document.getElementById("count").textContent = "TEAMS \u00b7 " + (data ? data.length : 0);
+    }
+  </script>
+</body>
+</html>
