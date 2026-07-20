@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Footy Legends Pub — Host</title>
+<style>
+  :root { --bg:#0a0f0a; --panel:#0f1710; --gold:#e9c46a; --green:#39d353; --text:#d8d8d8; --dim:#8a8576; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Courier New",monospace; padding:24px; }
+  h1 { color:var(--gold); letter-spacing:2px; font-size:18px; margin:0 0 4px; }
+  .sub { color:var(--dim); font-size:12px; margin-bottom:24px; }
+  button { background:var(--gold); color:#111; border:0; padding:14px 22px; font-family:inherit; font-size:15px; letter-spacing:2px; cursor:pointer; border-radius:6px; }
+  .code { font-size:64px; letter-spacing:12px; color:var(--gold); font-weight:bold; margin:8px 0; }
+  .card { background:var(--panel); border:1px solid #223; border-radius:10px; padding:24px; max-width:520px; }
+  #qr { background:#fff; padding:12px; border-radius:8px; display:inline-block; margin-top:12px; min-height:40px; }
+  #qr img { display:block; }
+  .teams { margin-top:24px; }
+  .team { background:#132013; border:1px solid #2a4; border-radius:8px; padding:12px 16px; margin-bottom:8px; font-size:16px; }
+  .count { color:var(--green); letter-spacing:2px; font-size:13px; margin-bottom:8px; }
+  .hint { color:var(--dim); font-size:12px; margin-top:16px; line-height:1.6; word-break:break-all; }
+</style>
+</head>
+<body>
+  <h1>FOOTY LEGENDS · HOST</h1>
+  <div class="sub">Spine test — create a room, let phones join.</div>
+
+  <div id="start" class="card">
+    <button id="newgame">NEW GAME</button>
+    <div class="hint">Click to create a room. A code + QR will appear. Phones scan the QR (or open the link) to join.</div>
+  </div>
+
+  <div id="live" class="card" style="display:none">
+    <div class="sub">ROOM CODE</div>
+    <div id="code" class="code"></div>
+    <div id="qr"></div>
+    <div class="teams">
+      <div id="count" class="count">TEAMS · 0</div>
+      <div id="teamlist"></div>
+    </div>
+    <div id="startbar" style="margin-top:20px;display:none">
+      <button id="startbtn" style="width:100%;background:var(--gold);color:#111;border:0;padding:16px;font-family:inherit;font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:6px">▶ START GAME</button>
+    </div>
+    <div id="roundinfo" class="count" style="margin-top:20px;display:none"></div>
+    <div id="stepbar" style="margin-top:14px;display:none">
+      <button id="stepbtn" style="width:100%;background:linear-gradient(180deg,#f4d788,#e9c46a);color:#111;border:0;padding:34px 16px;font-family:inherit;font-size:22px;letter-spacing:3px;cursor:pointer;border-radius:10px;box-shadow:0 4px 0 #b8963f">&#9654; NEXT REVEAL</button>
+    </div>
+    <div id="nextbar" style="margin-top:14px;display:none">
+      <button id="nextbtn" style="width:100%;background:#39d353;color:#0a0f0a;border:0;padding:16px;font-family:inherit;font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:6px">&#9654; NEXT ROUND</button>
+    </div>
+    <div id="revealbar" style="margin-top:14px;display:none">
+      <button id="revealbtn" style="width:100%;background:#e2554a;color:#fff;border:0;padding:16px;font-family:inherit;font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:6px">&#9733; REVEAL RESULTS</button>
+    </div>
+    <div id="tablebar" style="margin-top:14px;display:none">
+      <button id="tablebtn" style="width:100%;background:#132013;color:#39d353;border:1px solid #2a4;padding:16px;font-family:inherit;font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:6px">&#128203; TITLES TABLE</button>
+    </div>
+    <div id="endbar" style="margin-top:14px;display:none">
+      <button id="endbtn" style="width:100%;background:#2a1f10;color:var(--gold);border:1px solid var(--gold);padding:16px;font-family:inherit;font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:6px">&#127937; END TONIGHT</button>
+    </div>
+    <div class="hint" id="joinlink"></div>
+    <div class="hint">&#9888; Phones must join THIS code. Clicking NEW GAME again starts a fresh, empty room.</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ===== CONFIG (same three lines in host / join / display) =====
+    const SUPABASE_URL = "https://wrvbpxeuadalnflfygtk.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_DGcYVJ4eJWbrqmNSgyRQtA_49yrqbnp";
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // ===== helpers =====
+    function baseUrl(){ return location.origin + location.pathname.replace(/\/[^\/]*$/, ""); }
+    function makeCode(){ const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s=""; for(let i=0;i<4;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+    function safe(t){ const d=document.createElement("div"); d.textContent = t==null ? "" : String(t); return d.innerHTML; }
+
+    let roomId = null;
+    let roomCode = null;
+    let started = false;
+    let currentRound = 0;
+    document.getElementById("newgame").onclick = createRoom;
+    document.getElementById("startbtn").onclick = startGame;
+
+    async function startGame(){
+      if (!roomId || started) return;
+      const btn = document.getElementById("startbtn");
+      btn.disabled = true; btn.textContent = "STARTING…";
+      // 1) utworz runde 1
+      const { error: rErr } = await db.from("rounds").insert({
+        room_id: roomId, round_number: 1, theme: "england", status: "rolling"
+      });
+      if (rErr){ alert("Round error: " + rErr.message); btn.disabled=false; btn.textContent="▶ START GAME"; return; }
+      // 2) przelacz pokoj w tryb gry
+      const { error: uErr } = await db.from("rooms").update({ status: "playing", current_round: 1 }).eq("id", roomId);
+      if (uErr){ alert("Room error: " + uErr.message); btn.disabled=false; btn.textContent="▶ START GAME"; return; }
+      started = true;
+      currentRound = 1;
+      paintButtons("playing");
+    }
+
+    // ile kart pokazuje TV w tej rundzie (<=5 druzyn = wszyscy, 6+ = TOP 3)
+    let revealStep = 0;
+    let showCount  = 0;
+    async function loadRankCount(){
+      showCount = 0;
+      const { data: rd } = await db.from("rounds").select("id").eq("room_id", roomId).eq("round_number", currentRound).maybeSingle();
+      if (!rd) return;
+      const { data: es } = await db.from("entries").select("score").eq("round_id", rd.id);
+      const n = (es || []).filter(function(e){ return e.score != null; }).length;
+      showCount = (n <= 5) ? n : 3;
+    }
+    function ordinal(n){ return n===1 ? "THE WINNER" : (n===2 ? "2ND PLACE" : (n===3 ? "3RD PLACE" : n+"TH PLACE")); }
+    function paintStep(){
+      const bar = document.getElementById("stepbar");
+      const btn = document.getElementById("stepbtn");
+      const nextPlace = showCount - revealStep;     // miejsce, ktore odsloni NASTEPNY klik
+      if (nextPlace <= 0){ bar.style.display = "none"; return; }  // zwyciezca juz odsloniety
+      btn.disabled = false;
+      // pierwszy klik przy 4+ druzynach schodzi z tablicy na 3. miejsce
+      btn.innerHTML = "&#9654; REVEAL " + ordinal(nextPlace);
+      bar.style.display = "";
+    }
+    document.getElementById("stepbtn").onclick = async function(){
+      if (!roomId) return;
+      const btn = document.getElementById("stepbtn");
+      btn.disabled = true; btn.innerHTML = "REVEALING\u2026";
+      revealStep++;
+      const { error } = await db.from("rooms").update({ reveal_step: revealStep }).eq("id", roomId);
+      if (error){ alert("Step error: " + error.message); revealStep--; btn.disabled = false; return; }
+      paintButtons("reveal");   // po zwyciezcy pokaze NEXT ROUND / TABLE / END
+    };
+
+    document.getElementById("revealbtn").onclick = revealRound;
+    async function revealRound(){
+      if (!roomId) return;
+      const btn = document.getElementById("revealbtn");
+      btn.disabled = true; btn.textContent = "REVEALING…";
+      revealStep = 0;
+      await loadRankCount();
+      const { error } = await db.from("rooms").update({ status: "reveal", reveal_step: 0 }).eq("id", roomId);
+      if (error){ alert("Reveal error: " + error.message); btn.disabled=false; btn.textContent="★ REVEAL RESULTS"; return; }
+      paintButtons("reveal");
+    }
+
+    document.getElementById("tablebtn").onclick = showTitles;
+    async function showTitles(){
+      if (!roomId) return;
+      const btn = document.getElementById("tablebtn");
+      btn.disabled = true; btn.textContent = "SHOWING…";
+      const { error } = await db.from("rooms").update({ status: "table" }).eq("id", roomId);
+      if (error){ alert("Table error: " + error.message); btn.disabled=false; btn.innerHTML="&#128203; TITLES TABLE"; return; }
+      paintButtons("table");
+    }
+
+    document.getElementById("endbtn").onclick = endTonight;
+    async function endTonight(){
+      if (!roomId) return;
+      if (!confirm("End the night?\n\nThe big screen will show the OVERALL TABLE and the champions.\nNo more rounds after this.")) return;
+      const btn = document.getElementById("endbtn");
+      btn.disabled = true; btn.textContent = "ENDING…";
+      const { error } = await db.from("rooms").update({ status: "ended" }).eq("id", roomId);
+      if (error){ alert("End error: " + error.message); btn.disabled=false; btn.innerHTML="&#127937; END TONIGHT"; return; }
+      try { localStorage.removeItem("fl_host_room"); } catch(e){}
+      paintButtons("ended");
+    }
+
+    document.getElementById("nextbtn").onclick = nextRound;
+    async function nextRound(){
+      if (!roomId) return;
+      const btn = document.getElementById("nextbtn");
+      btn.disabled = true; btn.textContent = "STARTING…";
+      const next = currentRound + 1;
+      // 1) nowa runda
+      const { error: rErr } = await db.from("rounds").insert({
+        room_id: roomId, round_number: next, theme: "england", status: "rolling"
+      });
+      if (rErr){ alert("Round error: " + rErr.message); btn.disabled=false; btn.textContent="▶ NEXT ROUND"; return; }
+      // 2) pokoj z powrotem w tryb gry
+      const { error: uErr } = await db.from("rooms").update({ status: "playing", current_round: next }).eq("id", roomId);
+      if (uErr){ alert("Room error: " + uErr.message); btn.disabled=false; btn.textContent="▶ NEXT ROUND"; return; }
+      currentRound = next;
+      paintButtons("playing");
+    }
+
+    async function createRoom(){
+      const code = makeCode();
+      const { data, error } = await db.from("rooms").insert({ code: code, status: "lobby" }).select().single();
+      if (error){ alert("Could not create room: " + error.message); return; }
+      enterRoom(data);
+    }
+
+    // wejscie w pokoj (nowy albo odtworzony po odswiezeniu strony)
+    function enterRoom(room){
+      roomId = room.id;
+      roomCode = room.code;
+      currentRound = room.current_round || 0;
+      revealStep = room.reveal_step || 0;
+      started = (room.status !== "lobby");
+      if (room.status === "reveal") loadRankCount().then(paintStep);
+      try { localStorage.setItem("fl_host_room", room.code); } catch(e){}
+
+      document.getElementById("start").style.display = "none";
+      document.getElementById("live").style.display = "block";
+      document.getElementById("code").textContent = room.code;
+
+      const link = baseUrl() + "/join.html?room=" + room.code;
+      document.getElementById("joinlink").textContent = link;
+      const qrBox = document.getElementById("qr");
+      if (qrBox && !qrBox.querySelector("img")){
+        try {
+          const img = document.createElement("img");
+          img.width = 220; img.height = 220; img.alt = "QR to join";
+          img.src = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(link);
+          qrBox.appendChild(img);
+        } catch(e){}
+      }
+
+      paintButtons(room.status);
+
+      loadTeams();
+      try {
+        db.channel("host-" + roomId)
+          .on("postgres_changes", { event:"INSERT", schema:"public", table:"teams", filter:"room_id=eq."+roomId }, function(){ loadTeams(); })
+          .subscribe();
+      } catch(e){}
+      setInterval(loadTeams, 2000);
+    }
+
+    // ustaw przyciski wg stanu pokoju (dziala takze po odswiezeniu)
+    function paintButtons(status){
+      const ri = document.getElementById("roundinfo");
+      const sb = document.getElementById("startbar");
+      const rb = document.getElementById("revealbar");
+      const nb = document.getElementById("nextbar");
+      const eb = document.getElementById("endbar");
+      const tb = document.getElementById("tablebar");
+      const stp = document.getElementById("stepbar");
+      sb.style.display = "none"; rb.style.display = "none"; nb.style.display = "none"; eb.style.display = "none"; tb.style.display = "none"; stp.style.display = "none";
+      if (status === "ended"){
+        ri.style.display = ""; ri.textContent = "\u{1F3C1} NIGHT ENDED \u00b7 OVERALL TABLE ON THE BIG SCREEN";
+        return;
+      }
+      if (status === "lobby"){
+        ri.style.display = "none";
+      } else if (status === "playing"){
+        ri.style.display = ""; ri.textContent = "● ROUND " + currentRound + " · IN PLAY";
+        const rv = document.getElementById("revealbtn");
+        rv.disabled = false; rv.textContent = "★ REVEAL RESULTS";
+        rb.style.display = "";
+      } else if (status === "table"){
+        // tabela tytulow -> pelny zestaw sterowania
+        ri.style.display = ""; ri.textContent = "\u{1F4CB} TITLES TABLE ON THE BIG SCREEN";
+        showRoundControls();
+      } else if (status === "reveal"){
+        // reveal -> SHOWMAN: dopoki zwyciezca nie odsloniety, tylko jeden wielki przycisk
+        const winnerUp = (revealStep >= showCount && showCount > 0);
+        if (winnerUp){
+          ri.style.display = ""; ri.textContent = "\u2605 WINNER'S UP \u00b7 CARRY ON WHEN READY";
+          showRoundControls();
+        } else {
+          ri.style.display = ""; ri.textContent = "\u25cf REVEALING ON THE BIG SCREEN";
+          paintStep();   // pokazuje/chowa wielki przycisk NEXT REVEAL
+        }
+      }
+    }
+
+    // pelny zestaw: NEXT ROUND + TITLES TABLE + END TONIGHT (po zwyciezcy albo w tabeli)
+    function showRoundControls(){
+      const nx = document.getElementById("nextbtn");
+      nx.disabled = false; nx.textContent = "▶ NEXT ROUND";
+      document.getElementById("nextbar").style.display = "";
+      const tt = document.getElementById("tablebtn");
+      tt.disabled = false; tt.innerHTML = "&#128203; TITLES TABLE";
+      document.getElementById("tablebar").style.display = "";
+      const en = document.getElementById("endbtn");
+      en.disabled = false; en.innerHTML = "&#127937; END TONIGHT";
+      document.getElementById("endbar").style.display = "";
+    }
+
+    // po odswiezeniu strony: wroc do trwajacej gry
+    (async function restore(){
+      let code = null;
+      try { code = localStorage.getItem("fl_host_room"); } catch(e){}
+      if (!code) return;
+      const { data } = await db.from("rooms").select("*").eq("code", code).maybeSingle();
+      if (data && data.status !== "ended") enterRoom(data);
+    })();
+
+    async function loadTeams(){
+      if (!roomId) return;
+      const { data } = await db.from("teams").select("*").eq("room_id", roomId).order("created_at");
+      const list = document.getElementById("teamlist");
+      list.innerHTML = "";
+      (data || []).forEach(function(t){
+        const el = document.createElement("div");
+        el.className = "team";
+        el.innerHTML = "\u2713 " + safe(t.name);
+        list.appendChild(el);
+      });
+      document.getElementById("count").textContent = "TEAMS \u00b7 " + (data ? data.length : 0);
+      // pokaz START, gdy jest >=1 druzyna i gra jeszcze nie ruszyla
+      const hasTeams = data && data.length > 0;
+      document.getElementById("startbar").style.display = (hasTeams && !started) ? "" : "none";
+    }
+  </script>
+</body>
+</html>
