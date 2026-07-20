@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Footy Legends Pub — Display</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0a0f0a; --gold:#e9c46a; --green:#39d353; --text:#d8d8d8; --dim:#8a8576;
+          --px:'Press Start 2P',monospace; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Courier New",monospace; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
+  body.mode-tv { justify-content:flex-start; padding:14px; }
+  h1 { color:var(--gold); letter-spacing:4px; font-size:22px; margin:0 0 24px; }
+  .row { display:flex; gap:48px; align-items:center; flex-wrap:wrap; justify-content:center; }
+  .code { font-size:96px; letter-spacing:16px; color:var(--gold); font-weight:bold; }
+  #qr { background:#fff; padding:16px; border-radius:10px; }
+  #qr img { display:block; }
+  .teams { margin-top:40px; width:100%; max-width:800px; }
+  .count { color:var(--green); letter-spacing:3px; text-align:center; margin-bottom:16px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+  .team { background:#132013; border:1px solid #2a4; border-radius:10px; padding:18px; font-size:22px; text-align:center; }
+  .scan { color:var(--dim); font-size:14px; text-align:center; margin-top:12px; }
+
+  /* ===== REVEAL / FINALE (leaderboard) ===== */
+  #reveal { display:none; width:100%; max-width:820px; text-align:center; }
+  #reveal .rv-title { color:var(--gold); letter-spacing:6px; font-size:26px; margin-bottom:6px; }
+  #reveal .rv-sub { color:var(--dim); letter-spacing:3px; font-size:15px; margin-bottom:34px; }
+  .lb-row {
+    display:flex; align-items:center; gap:18px;
+    background:#101810; border:1px solid #1f2e1f; border-radius:12px;
+    padding:18px 24px; margin:10px 0; opacity:0; transform:translateY(14px);
+    transition:opacity .5s ease, transform .5s ease, background .4s, border-color .4s;
+  }
+  .lb-row.shown { opacity:1; transform:none; }
+  .lb-rank { color:var(--dim); font-size:26px; width:64px; text-align:left; letter-spacing:1px; }
+  .lb-name { flex:1; text-align:left; font-size:30px; color:var(--text); }
+  .lb-score { color:var(--dim); font-size:28px; min-width:120px; text-align:right; letter-spacing:2px; }
+  .lb-row.winner {
+    background:linear-gradient(180deg,#1c2410,#141c0e);
+    border-color:var(--gold); box-shadow:0 0 30px rgba(233,196,106,.28);
+    padding:26px 24px;
+  }
+  .lb-row.winner .lb-rank { color:var(--gold); }
+  .lb-row.winner .lb-name { color:var(--gold); font-size:40px; font-weight:bold; letter-spacing:1px; }
+  .lb-row.winner .lb-score { color:var(--gold); font-size:36px; }
+  .rv-crown { color:var(--gold); letter-spacing:5px; font-size:18px; margin:26px 0 6px; opacity:0; transition:opacity .5s; }
+  .rv-crown.shown { opacity:1; }
+  /* duzo druzyn -> zageszczenie, zeby 10 wierszy zmiescilo sie na TV */
+  #standings.dense .lb-row { padding:9px 18px; margin:6px 0; }
+  #standings.dense .lb-rank { font-size:18px; width:48px; }
+  #standings.dense .lb-name { font-size:20px; }
+  #standings.dense .lb-score { font-size:20px; min-width:90px; }
+  #standings.dense .lb-row.winner { padding:14px 18px; }
+  #standings.dense .lb-row.winner .lb-name { font-size:26px; }
+  #standings.dense .lb-row.winner .lb-score { font-size:24px; }
+
+  /* ===== ROUND REVEAL (karta druzyny: tytul + boisko + odrzuceni) ===== */
+  #roundview { display:none; width:100%; max-width:1500px; }
+  .rv-head { text-align:center; margin-bottom:10px; }
+  .rv-head .rh-round { color:var(--dim); font-family:var(--px); font-size:11px; letter-spacing:3px; }
+  .card { opacity:0; transform:translateY(18px); transition:opacity .6s ease, transform .6s ease; }
+  .card.shown { opacity:1; transform:none; }
+  .card-top { display:flex; align-items:baseline; gap:22px; justify-content:center; margin:6px 0 14px; }
+  .c-rank { font-family:var(--px); font-size:15px; letter-spacing:2px; color:var(--dim); }
+  .c-team { font-size:44px; color:var(--text); letter-spacing:1px; }
+  .c-pts  { font-family:var(--px); font-size:15px; color:var(--dim); letter-spacing:2px; }
+  .card.first .c-rank, .card.first .c-team, .card.first .c-pts { color:var(--gold); }
+  .card.first .c-team { font-size:56px; font-weight:bold; text-shadow:0 0 26px rgba(233,196,106,.35); }
+  .card-body { display:flex; gap:34px; align-items:flex-start; justify-content:center; }
+  .col-pitch { width:min(34vw,430px); flex:0 0 auto; }
+  .col-story { flex:1 1 auto; max-width:760px; text-align:left; padding-top:6px; }
+  .story-name { font-family:var(--px); font-size:26px; color:var(--gold); line-height:1.5; letter-spacing:1px; }
+  .story-desc { font-size:24px; color:var(--text); margin-top:16px; line-height:1.5; }
+  .story-rest { font-size:20px; color:var(--dim); margin-top:10px; line-height:1.5; font-style:italic; }
+  .rej-label { font-family:var(--px); font-size:11px; color:#7a4a4a; letter-spacing:3px; margin:26px 0 10px;
+               border-top:1px solid #2a1f1f; padding-top:14px; }
+  .rej-list { columns:3; column-gap:22px; font-size:17px; color:#6f6a5e; line-height:1.85; }
+  .rej-list span { display:block; break-inside:avoid; }
+
+  /* boisko na TV — te same kolory i uklad co w grze */
+  .tv-pitch { position:relative; width:100%; aspect-ratio:3/4;
+    background:
+      radial-gradient(ellipse at 50% 18%, rgba(200,235,215,.12) 0%, rgba(200,235,215,0) 50%),
+      radial-gradient(ellipse at 50% 46%, rgba(0,0,0,0) 55%, rgba(2,15,6,.45) 100%),
+      repeating-linear-gradient(to bottom, #1a5318 0, #1a5318 9%, #22641e 9%, #22641e 18%),
+      #14400c;
+    border:2px solid #1c4a12; overflow:hidden; border-radius:4px; }
+  .tv-pitch::before { content:""; position:absolute; left:0; right:0; top:0; height:2px; background:rgba(255,255,255,.18); }
+  .tv-pitch::after { content:""; position:absolute; left:50%; top:0; width:32%; aspect-ratio:1/1;
+    transform:translate(-50%,-50%); border:2px solid rgba(255,255,255,.16); border-radius:50%; }
+  .tv-penalty { position:absolute; left:50%; bottom:0; width:52%; height:17%;
+    transform:translateX(-50%); border:2px solid rgba(255,255,255,.16); border-bottom:none; }
+  .tv-sixyard { position:absolute; left:50%; bottom:0; width:26%; height:7%;
+    transform:translateX(-50%); border:2px solid rgba(255,255,255,.12); border-bottom:none; }
+  .tv-pitch .pdot { position:absolute; transform:translate(-50%,-50%);
+    display:flex; flex-direction:column; align-items:center; width:88px; }
+  .tv-pitch .pcircle { width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:var(--px); font-size:10px; border:3px solid; background:rgba(0,0,0,.78); color:#fff; font-weight:bold; }
+  .tv-pitch .pname { font-family:var(--px); font-size:9px; margin-top:6px; color:#fff; letter-spacing:.3px;
+    text-shadow:1px 1px 0 #000,-1px 1px 0 #000,1px -1px 0 #000,-1px -1px 0 #000,0 0 6px #000;
+    max-width:104px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tv-pitch .grp-gk .pcircle { border-color:#ffdd00; box-shadow:0 0 16px rgba(255,221,0,.55); }
+  .tv-pitch .grp-df .pcircle { border-color:#88ff44; box-shadow:0 0 16px rgba(136,255,68,.55); }
+  .tv-pitch .grp-mf .pcircle { border-color:#ff6600; box-shadow:0 0 16px rgba(255,102,0,.55); }
+  .tv-pitch .grp-fw .pcircle { border-color:#ff2200; box-shadow:0 0 16px rgba(255,34,0,.55); }
+
+  /* ===== TABELA TYTULOW (bez punktow) ===== */
+  #tableview { display:none; width:100%; max-width:1500px; }
+  .tv-th { text-align:center; margin-bottom:18px; }
+  .tv-th .t1 { color:var(--gold); font-family:var(--px); font-size:20px; letter-spacing:4px; }
+  .tv-th .t2 { color:var(--dim); font-family:var(--px); font-size:10px; letter-spacing:3px; margin-top:10px; }
+  table.titles { width:100%; border-collapse:collapse; }
+  table.titles th { color:var(--dim); font-family:var(--px); font-size:10px; letter-spacing:2px;
+    padding:10px 12px; text-align:left; border-bottom:1px solid #223; }
+  table.titles td { padding:12px; border-bottom:1px solid #162116; vertical-align:middle; }
+  td.tt-team { color:var(--text); font-size:26px; white-space:nowrap; padding-right:24px; }
+  td.tt-cell { color:var(--gold); font-family:var(--px); font-size:12px; letter-spacing:1px; line-height:1.6; }
+  td.tt-cell.none { color:#3f4a3f; }
+  table.titles.dense td.tt-team { font-size:19px; padding:7px 12px; }
+  table.titles.dense td.tt-cell { font-size:10px; padding:7px 12px; }
+</style>
+</head>
+<body>
+  <div id="rv-status" style="position:fixed;top:8px;left:8px;right:8px;color:#e2554a;font-family:'Courier New',monospace;font-size:13px;z-index:9999;text-align:left;white-space:pre-wrap"></div>
+
+  <!-- ===== LOBBY ===== -->
+  <div id="lobby" style="display:flex;flex-direction:column;align-items:center;width:100%">
+    <h1>FOOTY LEGENDS</h1>
+    <div class="row">
+      <div style="text-align:center">
+        <div class="scan">SCAN TO JOIN</div>
+        <div id="qr"></div>
+      </div>
+      <div style="text-align:center">
+        <div class="scan">ROOM CODE</div>
+        <div id="code" class="code">----</div>
+      </div>
+    </div>
+    <div class="teams">
+      <div id="count" class="count">TEAMS · 0</div>
+      <div id="grid" class="grid"></div>
+    </div>
+  </div>
+
+  <!-- ===== ROUND REVEAL (karty) ===== -->
+  <div id="roundview">
+    <div class="rv-head"><div class="rh-round" id="rh-round"></div></div>
+    <div id="cardstage"></div>
+  </div>
+
+  <!-- ===== TABELA TYTULOW ===== -->
+  <div id="tableview">
+    <div class="tv-th">
+      <div class="t1">WHAT THEY FOUND</div>
+      <div class="t2" id="tv-sub"></div>
+    </div>
+    <div id="titlestable"></div>
+  </div>
+
+  <!-- ===== FINALE (leaderboard) ===== -->
+  <div id="reveal">
+    <div class="rv-title" id="rv-title">TONIGHT'S RESULTS</div>
+    <div class="rv-sub" id="rv-sub">Round 1</div>
+    <div class="rv-crown" id="rv-crown">&#9733; ROUND WINNER &#9733;</div>
+    <div id="standings"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ===== CONFIG (same three lines in host / join / display) =====
+    const SUPABASE_URL = "https://wrvbpxeuadalnflfygtk.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_DGcYVJ4eJWbrqmNSgyRQtA_49yrqbnp";
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // ===== helpers =====
+    function qp(n){ return new URLSearchParams(location.search).get(n); }
+    function baseUrl(){ return location.origin + location.pathname.replace(/\/[^\/]*$/, ""); }
+    function safe(t){ const d=document.createElement("div"); d.textContent = t==null ? "" : String(t); return d.innerHTML; }
+    function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+    function el(id){ return document.getElementById(id); }
+
+    const code = (qp("room") || "").toUpperCase();
+    let roomId = null;
+    let mode = "lobby";       // lobby | reveal:<n> | table:<n> | finale — co JEST na ekranie
+    let busy = false;         // trwa animacja -> nie przelaczaj
+
+    // ===== formacje: kopia CFG.FORMATIONS z xad.js (dane prezentacyjne) =====
+    const FORMS = {
+      "4-4-2": [
+        {pos:"GK",x:.50,y:.90},
+        {pos:"RB",x:.86,y:.66},{pos:"CB",x:.62,y:.68},{pos:"CB",x:.38,y:.68},{pos:"LB",x:.14,y:.66},
+        {pos:"RM",x:.86,y:.44},{pos:"CM",x:.62,y:.46},{pos:"CM",x:.38,y:.46},{pos:"LM",x:.14,y:.44},
+        {pos:"ST",x:.62,y:.20},{pos:"ST",x:.38,y:.20}
+      ],
+      "4-3-3": [
+        {pos:"GK",x:.50,y:.90},
+        {pos:"RB",x:.86,y:.66},{pos:"CB",x:.62,y:.68},{pos:"CB",x:.38,y:.68},{pos:"LB",x:.14,y:.66},
+        {pos:"CM",x:.74,y:.48},{pos:"CM",x:.50,y:.46},{pos:"CM",x:.26,y:.48},
+        {pos:"RW",x:.80,y:.20},{pos:"ST",x:.50,y:.18},{pos:"LW",x:.20,y:.20}
+      ],
+      "3-5-2": [
+        {pos:"GK",x:.50,y:.90},
+        {pos:"CB",x:.74,y:.68},{pos:"CB",x:.50,y:.70},{pos:"CB",x:.26,y:.68},
+        {pos:"RM",x:.88,y:.46},{pos:"CM",x:.66,y:.46},{pos:"CM",x:.50,y:.52},{pos:"CM",x:.34,y:.46},{pos:"LM",x:.12,y:.46},
+        {pos:"ST",x:.62,y:.20},{pos:"ST",x:.38,y:.20}
+      ],
+      "4-2-3-1": [
+        {pos:"GK",x:.50,y:.90},
+        {pos:"RB",x:.86,y:.68},{pos:"CB",x:.62,y:.70},{pos:"CB",x:.38,y:.70},{pos:"LB",x:.14,y:.68},
+        {pos:"DM",x:.62,y:.54},{pos:"DM",x:.38,y:.54},
+        {pos:"RW",x:.80,y:.34},{pos:"AM",x:.50,y:.32},{pos:"LW",x:.20,y:.34},
+        {pos:"ST",x:.50,y:.16}
+      ],
+      "5-3-2": [
+        {pos:"GK",x:.50,y:.90},
+        {pos:"RB",x:.92,y:.62},{pos:"CB",x:.71,y:.70},{pos:"CB",x:.50,y:.72},{pos:"CB",x:.29,y:.70},{pos:"LB",x:.08,y:.62},
+        {pos:"CM",x:.72,y:.46},{pos:"CM",x:.50,y:.46},{pos:"CM",x:.28,y:.46},
+        {pos:"ST",x:.62,y:.20},{pos:"ST",x:.38,y:.20}
+      ]
+    };
+    const GRP = {GK:"grp-gk", DF:"grp-df", MF:"grp-mf", FW:"grp-fw"};
+    function lastName(full){ const p = String(full||"").trim().split(/\s+/); return p.length>1 ? p[p.length-1] : full; }
+
+    // xi w bazie: {formation, slots} (nowe) albo goła tablica 11 (stare wpisy)
+    function xiParts(xi){
+      if (Array.isArray(xi)) return { formation:"4-4-2", slots:xi };
+      if (xi && xi.slots)    return { formation: xi.formation || "4-4-2", slots: xi.slots };
+      return { formation:"4-4-2", slots:[] };
+    }
+    function pitchHTML(xi){
+      const P = xiParts(xi);
+      const geo = FORMS[P.formation] || FORMS["4-4-2"];
+      let h = '<div class="tv-pitch"><div class="tv-penalty"></div><div class="tv-sixyard"></div>';
+      for (let i=0; i<geo.length; i++){
+        const g = geo[i], p = P.slots[i];
+        if (!p) continue;
+        h += '<div class="pdot ' + (GRP[p.p]||"") + '" style="left:'+(g.x*100)+'%;top:'+(g.y*100)+'%">'
+           +   '<div class="pcircle">' + safe(g.pos) + '</div>'
+           +   '<div class="pname">' + safe(lastName(p.n)) + '</div>'
+           + '</div>';
+      }
+      return h + '</div>';
+    }
+    // 19 nieodrzuconych = pula 30 minus XI
+    function rejectedHTML(pool, xi){
+      const P = xiParts(xi);
+      const inXI = {}; (P.slots||[]).forEach(function(p){ if(p) inXI[p.n] = 1; });
+      const ord = {GK:0, DF:1, MF:2, FW:3};
+      const rest = (pool||[]).filter(function(p){ return p && !inXI[p.n]; })
+        .sort(function(a,b){ return (ord[a.p]-ord[b.p]) || String(a.n).localeCompare(String(b.n)); });
+      if (!rest.length) return "";
+      return '<div class="rej-label">LEFT ON THE BENCH &middot; ' + rest.length + '</div>'
+           + '<div class="rej-list">' + rest.map(function(p){ return '<span>'+safe(p.n)+'</span>'; }).join("") + '</div>';
+    }
+    // title w bazie: JSON {key,name,emoji,desc,rest} albo zwykly tekst
+    function story(entry){
+      if (!entry || !entry.title) return null;
+      try { const s = JSON.parse(entry.title); if (s && s.name) return s; } catch(e){}
+      return { name: String(entry.title), emoji:"", desc:"", rest:"" };
+    }
+
+    function showOnly(id){
+      ["lobby","roundview","tableview","reveal"].forEach(function(v){
+        const n = el(v); if (n) n.style.display = "none";
+      });
+      const n = el(id);
+      if (n) n.style.display = (id === "lobby") ? "flex" : "block";   // NIGDY "" — CSS ma display:none
+      document.body.classList.toggle("mode-tv", id !== "lobby");
+    }
+
+    // ===== start =====
+    (async function(){
+      if (!code){ el("code").textContent = "????"; return; }
+      const { data } = await db.from("rooms").select("*").eq("code", code).single();
+      if (!data){ el("code").textContent = "????"; return; }
+      roomId = data.id;
+      el("code").textContent = code;
+
+      const link = baseUrl() + "/join.html?room=" + code;
+      try {
+        const img = document.createElement("img");
+        img.width = 240; img.height = 240; img.alt = "QR to join";
+        img.src = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + encodeURIComponent(link);
+        el("qr").appendChild(img);
+      } catch(e){}
+
+      loadTeams();
+      checkRoom();
+      try {
+        db.channel("display-" + roomId)
+          .on("postgres_changes", { event:"INSERT", schema:"public", table:"teams", filter:"room_id=eq."+roomId }, function(){ loadTeams(); })
+          .on("postgres_changes", { event:"UPDATE", schema:"public", table:"rooms", filter:"id=eq."+roomId }, function(){ checkRoom(); })
+          .subscribe();
+      } catch(e){}
+      setInterval(function(){ if (mode === "lobby") loadTeams(); checkRoom(); }, 2000);
+    })();
+
+    async function loadTeams(){
+      if (!roomId || mode !== "lobby") return;
+      const { data } = await db.from("teams").select("*").eq("room_id", roomId).order("created_at");
+      const grid = el("grid");
+      grid.innerHTML = "";
+      (data || []).forEach(function(t){
+        const d = document.createElement("div");
+        d.className = "team";
+        d.innerHTML = safe(t.name);
+        grid.appendChild(d);
+      });
+      el("count").textContent = "TEAMS \u00b7 " + (data ? data.length : 0);
+    }
+
+    // ===== router stanu pokoju =====
+    async function checkRoom(){
+      if (!roomId || busy) return;
+      const { data: room } = await db.from("rooms").select("*").eq("id", roomId).single();
+      if (!room){ rvError("Nie znaleziono pokoju."); return; }
+
+      if (room.status === "ended"){
+        if (mode !== "finale"){ mode = "finale"; rvStep("status=ended"); runFinale(room); }
+      } else if (room.status === "reveal"){
+        const want = "reveal:" + room.current_round;
+        if (mode !== want){ mode = want; rvStep("status=reveal r" + room.current_round); runRound(room); }
+      } else if (room.status === "table"){
+        const want = "table:" + room.current_round;
+        if (mode !== want){ mode = want; rvStep("status=table"); runTitlesTable(room); }
+      } else if (room.status === "playing"){
+        if (mode !== "lobby"){ backToLobby(); }
+      }
+    }
+
+    function backToLobby(){
+      mode = "lobby"; rvLocked = false; rvTrace = [];
+      const s = el("rv-status"); if (s){ s.textContent = ""; s.style.color = "#e2554a"; }
+      el("cardstage").innerHTML = "";
+      el("standings").innerHTML = "";
+      el("rv-crown").classList.remove("shown");
+      showOnly("lobby");
+      loadTeams();
+    }
+
+    // ===== diagnostyka (jak dotad) =====
+    let rvLocked = false;
+    let rvTrace = [];
+    function rvError(t){ const e2 = el("rv-status"); if (e2){ e2.style.color = "#e2554a"; e2.textContent = t; } rvLocked = true; }
+    function rvStep(t){ rvTrace.push(t); const e2 = el("rv-status"); if (e2){ e2.style.color = "#e9c46a"; e2.textContent = rvTrace.join(" | "); } }
+    function rvClear(){ setTimeout(function(){ if (!rvLocked){ const e2 = el("rv-status"); if (e2) e2.textContent = ""; } }, 1400); }
+
+    // wspolne: wpisy rundy + nazwy druzyn, posortowane malejaco
+    async function rankedForRound(room){
+      const { data: round, error: rErr } = await db.from("rounds").select("*")
+        .eq("room_id", roomId).eq("round_number", room.current_round).maybeSingle();
+      if (rErr) throw new Error("rounds: " + rErr.message);
+      if (!round) throw new Error("Brak aktywnej rundy (round_number=" + room.current_round + "). Host i TV na tym samym kodzie?");
+      const { data: entries, error: eErr } = await db.from("entries").select("*").eq("round_id", round.id);
+      if (eErr) throw new Error("entries: " + eErr.message);
+      const { data: teams, error: tErr } = await db.from("teams").select("*").eq("room_id", roomId);
+      if (tErr) throw new Error("teams: " + tErr.message);
+      const nameById = {}; (teams||[]).forEach(function(t){ nameById[t.id] = t.name; });
+      return (entries||[])
+        .filter(function(e){ return e.score != null; })
+        .map(function(e){ return { name: nameById[e.team_id] || "\u2014", score: e.score, entry: e }; })
+        .sort(function(a,b){ return b.score - a.score; });
+    }
+
+    // ===== RUNDA: TOP 3 (albo wszyscy przy <=5 druzynach), karta po karcie =====
+    const RANK_LABEL = ["WINNER", "2ND", "3RD", "4TH", "5TH", "6TH", "7TH", "8TH", "9TH", "10TH"];
+    async function runRound(room){
+      busy = true;
+      try {
+        const ranked = await rankedForRound(room);
+        if (!ranked.length){ rvError("Nikt nie zalockowal skladu w tej rundzie."); busy = false; return; }
+
+        // <=5 druzyn -> pokazujemy wszystkich; 6+ -> tylko TOP 3
+        const show = (ranked.length <= 5) ? ranked.length : 3;
+        rvStep("teams=" + ranked.length + " show=" + show);
+        rvClear();
+
+        el("rh-round").textContent = "ROUND " + room.current_round + " \u00b7 "
+          + (show === ranked.length ? "THE STORIES" : "TOP 3");
+        el("cardstage").innerHTML = "";
+        showOnly("roundview");
+
+        // od najnizszego pokazywanego miejsca w gore, konczymy na zwyciezcy
+        for (let r = show; r >= 1; r--){
+          const it = ranked[r-1];
+          const st = story(it.entry);
+          const card = document.createElement("div");
+          card.className = "card" + (r === 1 ? " first" : "");
+          card.innerHTML =
+            '<div class="card-top">'
+          +   '<span class="c-rank">' + (RANK_LABEL[r-1] || (r + "TH")) + '</span>'
+          +   '<span class="c-team">' + safe(it.name) + '</span>'
+          +   '<span class="c-pts">' + it.score + ' PTS</span>'
+          + '</div>'
+          + '<div class="card-body">'
+          +   '<div class="col-pitch">' + pitchHTML(it.entry.xi) + '</div>'
+          +   '<div class="col-story">'
+          +     (st ? '<div class="story-name">' + safe((st.emoji ? st.emoji + " " : "") + st.name) + '</div>' : "")
+          +     (st && st.desc ? '<div class="story-desc">' + safe(st.desc) + '</div>' : "")
+          +     (st && st.rest ? '<div class="story-rest">' + safe(st.rest) + '</div>' : "")
+          +     rejectedHTML(it.entry.pool, it.entry.xi)
+          +   '</div>'
+          + '</div>';
+          el("cardstage").innerHTML = "";
+          el("cardstage").appendChild(card);
+          await sleep(60);
+          card.classList.add("shown");
+          await sleep(r === 1 ? 1000 : 7000);   // zwyciezca zostaje na ekranie
+        }
+      } catch(err){
+        rvError("ROUND ERROR: " + (err && err.message ? err.message : err));
+        console.error("runRound:", err);
+      }
+      busy = false;
+    }
+
+    // ===== TABELA TYTULOW: kto co znalazl, bez punktow =====
+    async function runTitlesTable(room){
+      busy = true;
+      try {
+        const { data: rounds, error: rErr } = await db.from("rounds").select("id,round_number").eq("room_id", roomId);
+        if (rErr) throw new Error("rounds: " + rErr.message);
+        const rs = (rounds||[]).slice().sort(function(a,b){ return a.round_number - b.round_number; });
+        if (!rs.length){ rvError("Brak rund."); busy = false; return; }
+
+        const ids = rs.map(function(r){ return r.id; });
+        const { data: entries, error: eErr } = await db.from("entries").select("round_id,team_id,title,score").in("round_id", ids);
+        if (eErr) throw new Error("entries: " + eErr.message);
+        const { data: teams, error: tErr } = await db.from("teams").select("*").eq("room_id", roomId);
+        if (tErr) throw new Error("teams: " + tErr.message);
+        const playing = (teams||[]).filter(function(t){ return t.role !== "spectator"; });
+        if (!playing.length){ rvError("Brak druzyn."); busy = false; return; }
+
+        // klucz: team|round -> tytul
+        const cell = {};
+        (entries||[]).forEach(function(e){
+          const s = story(e);
+          if (s) cell[e.team_id + "|" + e.round_id] = (s.emoji ? s.emoji + " " : "") + s.name;
+        });
+        // kolejnosc druzyn: po sumie punktow, ale punktow NIE pokazujemy
+        const tot = {};
+        playing.forEach(function(t){ tot[t.id] = 0; });
+        (entries||[]).forEach(function(e){ if (e.score != null && tot[e.team_id] !== undefined) tot[e.team_id] += e.score; });
+        playing.sort(function(a,b){ return tot[b.id] - tot[a.id]; });
+
+        let h = '<table class="titles' + (playing.length > 6 ? ' dense' : '') + '"><tr><th></th>';
+        rs.forEach(function(r){ h += '<th>ROUND ' + r.round_number + '</th>'; });
+        h += '</tr>';
+        playing.forEach(function(t){
+          h += '<tr><td class="tt-team">' + safe(t.name) + '</td>';
+          rs.forEach(function(r){
+            const v = cell[t.id + "|" + r.id];
+            h += v ? '<td class="tt-cell">' + safe(v) + '</td>'
+                   : '<td class="tt-cell none">&mdash;</td>';
+          });
+          h += '</tr>';
+        });
+        h += '</table>';
+
+        el("tv-sub").textContent = rs.length + " ROUND" + (rs.length === 1 ? "" : "S") + " \u00b7 NO POINTS, JUST STORIES";
+        el("titlestable").innerHTML = h;
+        showOnly("tableview");
+        rvStep("table rounds=" + rs.length + " teams=" + playing.length);
+        rvClear();
+      } catch(err){
+        rvError("TABLE ERROR: " + (err && err.message ? err.message : err));
+        console.error("runTitlesTable:", err);
+      }
+      busy = false;
+    }
+
+    // ===== FINAL (END TONIGHT): suma punktow ze WSZYSTKICH rund =====
+    async function runFinale(room){
+      busy = true;
+      try {
+        rvStep("finale start");
+        const { data: rounds, error: rErr } = await db.from("rounds").select("id,round_number").eq("room_id", roomId);
+        if (rErr) throw new Error("rounds: " + rErr.message);
+        const roundIds = (rounds || []).map(function(r){ return r.id; });
+        if (!roundIds.length){ rvError("Brak rund w tym pokoju — nie ma czego sumowac."); busy = false; return; }
+
+        const { data: entries, error: eErr } = await db.from("entries").select("round_id,team_id,score").in("round_id", roundIds);
+        if (eErr) throw new Error("entries: " + eErr.message);
+        const { data: teams, error: tErr } = await db.from("teams").select("*").eq("room_id", roomId);
+        if (tErr) throw new Error("teams: " + tErr.message);
+        const playing = (teams || []).filter(function(t){ return t.role !== "spectator"; });
+        if (!playing.length){ rvError("Brak druzyn w tym pokoju."); busy = false; return; }
+
+        const totals = {};
+        playing.forEach(function(t){ totals[t.id] = 0; });
+        (entries || []).forEach(function(e){
+          if (e.score == null) return;
+          if (totals[e.team_id] === undefined) return;
+          totals[e.team_id] += e.score;
+        });
+        const ranked = playing
+          .map(function(t){ return { name: t.name, score: totals[t.id] }; })
+          .sort(function(a,b){ return b.score - a.score; });
+
+        rvStep("rounds=" + roundIds.length + " teams=" + ranked.length);
+
+        showOnly("reveal");
+        el("rv-title").textContent = "FINAL STANDINGS";
+        el("rv-sub").textContent   = roundIds.length + " ROUND" + (roundIds.length === 1 ? "" : "S") + " \u00b7 TONIGHT'S TOTAL";
+        el("rv-crown").innerHTML   = "\u{1F3C6} CHAMPIONS OF THE NIGHT \u{1F3C6}";
+        el("rv-crown").classList.remove("shown");
+
+        const wrap = el("standings");
+        wrap.innerHTML = "";
+        wrap.className = ranked.length > 6 ? "dense" : "";   // 10 druzyn miesci sie na TV
+        rvClear();
+
+        const n = ranked.length;
+        const rows = [];
+        for (let r=1; r<=n; r++){
+          const row = document.createElement("div");
+          row.className = "lb-row" + (r===1 ? " winner" : "");
+          row.innerHTML = '<div class="lb-rank">'+ r +'</div>'
+                        + '<div class="lb-name">&nbsp;</div>'
+                        + '<div class="lb-score">&bull;&bull;&bull;</div>';
+          wrap.appendChild(row);
+          rows.push(row);
+        }
+
+        await sleep(900);
+        for (let r=n; r>=2; r--){
+          rows[r-1].querySelector(".lb-name").innerHTML = safe(ranked[r-1].name);
+          rows[r-1].classList.add("shown");
+          await sleep(1600);
+        }
+
+        await sleep(1400);
+        el("rv-crown").classList.add("shown");
+        const w = rows[0];
+        w.querySelector(".lb-name").innerHTML = safe(ranked[0].name);
+        w.querySelector(".lb-score").textContent = ranked[0].score;
+        w.classList.add("shown");
+
+        await sleep(1800);
+        for (let r=1; r<=n; r++){
+          rows[r-1].querySelector(".lb-score").textContent = ranked[r-1].score;
+        }
+      } catch(err){
+        rvError("FINALE ERROR: " + (err && err.message ? err.message : err));
+        console.error("runFinale:", err);
+      }
+      busy = false;
+    }
+  </script>
+</body>
+</html>

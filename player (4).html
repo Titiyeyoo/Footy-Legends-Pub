@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content, viewport-fit=cover">
+<title>Footy Legends Pub — Player</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* Pub-only: dlugie nazwiska na boisku After Dark w CALOSCI (bez urywania "Rashf…").
+     Wzor wziety wprost z Twojego widoku Classic solo (#cl-view-pitch .pname).
+     Do przeniesienia do solo, jesli zechcesz spojnosci. */
+  #s-xad .pdot .pname{
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:96px;
+  }
+  #s-xad .xad-col-pitch.shrunk .pdot .pname{
+    font-size:6px; max-width:80px; letter-spacing:0; margin-top:5px;
+  }
+  /* ROLL nieaktywny w lobby (do czasu STARTU hosta) */
+  #xad-pick-btn.fld-rolllocked{ opacity:.45; filter:grayscale(.5); cursor:default; }
+</style>
+</head>
+<body class="xi-mode">
+
+<!-- ===== Ekran After Dark: markup 1:1 z Twojego index.html (sekcja s-xad) =====
+     Zmiany minimalne dla pub: przycisk ✕ -> plakietka druzyny; reveal solo zostaje w xad.js,
+     ale LOCK IN przechwytujemy nizej (pub: zapis + czekanie, reveal bedzie na TV). -->
+<div class="screen on" id="s-xad">
+ <div class="xad-wrap">
+  <div class="xad-header">
+    <span class="xad-title">XI AFTER DARK</span>
+    <span class="xad-exit" id="fld-team" style="cursor:default"></span>
+  </div>
+
+  <div id="xad-draft" style="display:none">
+    <div id="xad-welcome" class="xad-welcome">
+      <div class="xad-welcome-tag">Build your XI.<br>Discover the story.</div>
+      <button id="xad-pick-btn" class="xad-bigbtn xad-rollbtn" onclick="xadDraw()">
+        <span class="xad-dice" id="xad-dice">🎲</span> ROLL THE SQUAD
+      </button>
+      <div class="xad-welcome-cap">Draw 30 legends<br>and build your XI</div>
+    </div>
+    <div class="xad-formbar-row">
+      <div id="xad-formbar" class="xad-formbar"></div>
+    </div>
+    <div class="xad-cols">
+      <div class="xad-col-pitch">
+        <div class="xad-sectlabel">YOUR XI · <b id="xad-count">0</b>/11</div>
+        <div id="xad-actions" class="xad-actions">
+          <button id="xad-lock-btn" class="btn" disabled onclick="xadLockXI()">⚽ LOCK IN</button>
+        </div>
+        <div id="xad-pitch" class="xad-pitch"><div class="xad-penalty"></div><div class="xad-sixyard"></div></div>
+      </div>
+      <div class="xad-col-pool">
+        <div class="xad-sectlabel">POOL · TAP TO PICK</div>
+        <div id="xad-filterline" class="xad-filterline-pool" style="display:none"></div>
+        <div id="xad-pool" class="xad-pool"></div>
+      </div>
+    </div>
+    <div id="xad-predeal-foot" class="xad-predeal-foot" style="display:none"></div>
+    <div id="xad-flash" class="xad-flashline"></div>
+  </div>
+
+  <!-- ekran czekania (lobby, przed startem hosta) -->
+  <div id="fld-waiting" style="display:none;text-align:center;padding:60px 20px">
+    <div style="color:var(--gold);font-family:var(--px);font-size:14px;letter-spacing:1px;line-height:2">⏳ IN THE LOBBY</div>
+    <div class="fld-wait-sub" style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:14px">Waiting for the host to start…</div>
+  </div>
+
+  <!-- ekran po LOCK IN (pub): draft znika, czekamy na reveal na TV -->
+  <div id="fld-locked" style="display:none;text-align:center;padding:60px 20px">
+    <div style="color:#39d353;font-family:var(--px);font-size:14px;letter-spacing:1px;line-height:2">✓ XI LOCKED</div>
+    <div style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:14px">Waiting for the reveal<br>on the big screen…</div>
+  </div>
+
+  <!-- ekran konca wieczoru (host kliknal END TONIGHT) -->
+  <div id="fld-ended" style="display:none;text-align:center;padding:60px 20px">
+    <div style="color:var(--gold);font-family:var(--px);font-size:14px;letter-spacing:1px;line-height:2">🏁 THAT'S THE NIGHT</div>
+    <div style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:14px">Final table is on<br>the big screen.</div>
+    <div style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:22px">Thanks for playing.<br>Same again next time?</div>
+  </div>
+
+ </div>
+</div>
+
+<!-- ===== SHIM: zaslepki na 7 funkcji solo, ktorych pub nie ma (zeby xad.js ruszyl czysto) ===== -->
+<script>
+  // no-op / minimalne wersje solo-owych zaleznosci
+  window.go = function(){};                                   // nawigacja miedzy ekranami solo — pub ma jeden ekran
+  window.flTrack = function(){};                              // analityka solo
+  window.getXadStories = function(){ return new Set(); };     // licznik odkrytych historii (Observations)
+  window.getStoredName = function(){ return localStorage.getItem("fl_team_name") || ""; };
+  window.logProfile = function(){};                           // profil Observations
+  window.escapeHtml = function(s){ return (""+s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];}); };
+  window.toast = function(msg){
+    var t=document.getElementById("fld-toast");
+    if(!t){ t=document.createElement("div"); t.id="fld-toast"; document.body.appendChild(t);
+      t.style.cssText="position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:9999;background:#1a1a0d;border:1px solid #c8960c;color:#c8960c;font-family:'Press Start 2P',monospace;font-size:8px;letter-spacing:1px;padding:10px 14px;border-radius:4px;max-width:80vw;text-align:center;transition:opacity .2s"; }
+    t.textContent=msg; t.style.opacity="1"; clearTimeout(window._flt); window._flt=setTimeout(function(){t.style.opacity="0";},1600);
+  };
+</script>
+
+<!-- ===== Twoje pliki, bez zmian ===== -->
+<script src="db.js"></script>
+<script src="xad.js"></script>
+
+<!-- ===== Sterowanie pub (Krok 2: lobby = draft z nieaktywnym ROLL; START zapala) ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // --- config (te same co host/join) ---
+  const SUPABASE_URL = "https://wrvbpxeuadalnflfygtk.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_DGcYVJ4eJWbrqmNSgyRQtA_49yrqbnp";
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  function qp(n){ return new URLSearchParams(location.search).get(n); }
+  const CODE     = (qp("room") || localStorage.getItem("fl_room_code") || "").toUpperCase();
+  const TEAM_ID  = localStorage.getItem("fl_team_id");
+  const TEAM_NAME= localStorage.getItem("fl_team_name") || "PLAYER";
+
+  document.getElementById("fld-team").textContent = TEAM_NAME.toUpperCase();
+
+  let room = null;
+  let roundId = null;
+  let playing = false;
+  let poolSaved = false;
+  let ended = false;
+  let curRoundNum = null;
+
+  // --- ROLL: nieaktywny w lobby, aktywny po STARCIE ---
+  function lockRoll(){
+    const b = document.getElementById("xad-pick-btn"); if(!b) return;
+    b.disabled = true; b.classList.add("fld-rolllocked");
+    b.innerHTML = "\u23f3 WAITING FOR HOST";
+  }
+  function unlockRoll(){
+    const b = document.getElementById("xad-pick-btn"); if(!b) return;
+    b.disabled = false; b.classList.remove("fld-rolllocked");
+    b.innerHTML = '<span class="xad-dice" id="xad-dice">\ud83c\udfb2</span> ROLL THE SQUAD';
+  }
+  function setCap(txt){ const c = document.querySelector("#xad-welcome .xad-welcome-cap"); if(c) c.textContent = txt; }
+
+  // --- pokaz ekran draftu OD RAZU (ROLL zablokowany do STARTU) ---
+  // wyczysc ewentualny stary draft z poprzedniej gry (zeby xad.js nie pytal "wznowic?"
+  // i zeby nie zablokowac starego skladu do nowej rundy)
+  try { localStorage.removeItem("fl_xad_draft"); } catch(e){}
+  document.getElementById("xad-draft").style.display = "";
+  try { window.openXAD(); } catch(e){ console.error("openXAD:", e); }
+  lockRoll();
+  setCap("Waiting for the host to start\u2026");
+
+  // --- odczyt pokoju + rundy, bramka lobby->playing ---
+  async function refresh(){
+    if (!CODE){ setCap("No room code \u2014 re-scan the QR."); return; }
+    const { data: r } = await sb.from("rooms").select("*").eq("code", CODE).single();
+    if (!r){ setCap("Room not found."); return; }
+    room = r;
+
+    if (r.status === "ended"){
+      if (!ended){
+        ended = true; playing = false;
+        document.getElementById("xad-draft").style.display = "none";
+        document.getElementById("fld-waiting").style.display = "none";
+        document.getElementById("fld-locked").style.display = "none";
+        document.getElementById("fld-ended").style.display = "";
+        try { localStorage.removeItem("fl_xad_draft"); } catch(e){}
+        try { window.scrollTo(0,0); } catch(e){}
+      }
+      return;
+    }
+
+    if (r.status === "playing"){
+      // nowa runda? (start lub NEXT ROUND)
+      if (curRoundNum !== r.current_round){
+        const { data: rd } = await sb.from("rounds").select("*")
+          .eq("room_id", r.id).eq("round_number", r.current_round).maybeSingle();
+        if (rd){
+          curRoundNum = r.current_round;
+          roundId = rd.id;
+          startFreshRound();
+        }
+      }
+    } else if (r.status === "lobby"){
+      const { count } = await sb.from("teams").select("*", { count:"exact", head:true }).eq("room_id", r.id);
+      setCap("You're in \u2713  \u00b7  " + (count||0) + " team(s) \u00b7 waiting for host\u2026");
+    }
+  }
+
+  // --- reset ekranu na nowa runde (czysta pula, pusty sklad, ROLL aktywny) ---
+  function startFreshRound(){
+    playing = true;
+    poolSaved = false;
+    try { localStorage.removeItem("fl_xad_draft"); } catch(e){}
+    document.getElementById("fld-locked").style.display = "none";
+    document.getElementById("xad-draft").style.display = "";
+    try { window.openXAD(); } catch(e){ console.error("openXAD:", e); }
+    unlockRoll();
+    setCap("Round " + curRoundNum + " \u00b7 draw 30 legends and build your XI");
+    try { window.scrollTo(0,0); } catch(e){}
+  }
+
+  // --- ROLL: tylko bramka (brak rolla przed startem). Puli NIE zapisujemy tutaj:
+  //     xad.js serializuje draft do localStorage dopiero po wstawieniu 1. gracza
+  //     (przy pustym skladzie kasuje zapis), wiec pule + sklad zapisujemy RAZEM przy LOCK IN. ---
+  const _origDraw = window.xadDraw;
+  window.xadDraw = function(){
+    if (!playing) return;
+    if (typeof _origDraw === "function") _origDraw();
+  };
+
+  // --- LOCK IN: zapis puli + skladu na serwer, potem ekran "waiting for reveal" ---
+  window.xadLockXI = async function(){
+    let state = null;
+    try { state = JSON.parse(localStorage.getItem("fl_xad_draft")); } catch(e){}
+    // policz wynik Twoim silnikiem (na aktualnym skladzie, zanim cokolwiek wyczyscimy)
+    let score = null;
+    try { score = window.xadScoreCurrent(); } catch(e){}
+    // narracja/tytul — TEN SAM eksport co Classic (xadStoryFor), zero zmian w xad.js.
+    // do bazy leci JSON: {key,name,emoji,desc,rest} — TV pokaze naglowek + tagline.
+    let title = null;
+    try {
+      const xi = (state && state.slots ? state.slots : []).filter(function(p){ return p; });
+      if (xi.length === 11){
+        const st = window.xadStoryFor(xi);
+        if (st) title = JSON.stringify(st);
+      }
+    } catch(e){ console.warn("story:", e); }
+    // UI od razu (nie kaz graczowi czekac na siec)
+    playing = false;   // koniec tej rundy dla tego telefonu
+    document.getElementById("xad-draft").style.display = "none";
+    document.getElementById("fld-locked").style.display = "";
+    try { window.scrollTo(0,0); } catch(e){}
+    // serwer: pula (POOL) + sklad (11) + wynik + status + czas
+    if (state && roundId && TEAM_ID){
+      const { error } = await sb.from("entries").upsert(
+        { round_id: roundId, team_id: TEAM_ID, pool: state.pool,
+          xi: { formation: state.formation || "4-4-2", slots: state.slots },
+          score: score, title: title, status: "locked", locked_at: new Date().toISOString() },
+        { onConflict: "round_id,team_id" }
+      );
+      if (error) console.error("lock save:", error.message);
+      else console.log("ENTRY zapisany: score=" + score + " · title=" + (title ? JSON.parse(title).name : "brak") + " · pool(" + (state.pool ? state.pool.length : 0) + ") + xi + locked");
+    } else {
+      console.warn("lock: brak danych do zapisu", { hasState:!!state, roundId, TEAM_ID });
+    }
+  };
+
+  // --- start: odswiezaj co 2s dopoki nie ruszy gra + realtime na zmiane pokoju ---
+  refresh();
+  setInterval(refresh, 2000);   // nasluchuj zawsze — takze po locku (NEXT ROUND)
+  try {
+    sb.channel("player-" + CODE)
+      .on("postgres_changes", { event:"UPDATE", schema:"public", table:"rooms", filter:"code=eq."+CODE }, refresh)
+      .subscribe();
+  } catch(e){}
+</script>
+</body>
+</html>
