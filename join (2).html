@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Footy Legends Pub — Join</title>
+<style>
+  :root { --bg:#0a0f0a; --panel:#0f1710; --gold:#e9c46a; --green:#39d353; --text:#d8d8d8; --dim:#8a8576; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Courier New",monospace; padding:24px; min-height:100vh; display:flex; flex-direction:column; justify-content:center; }
+  h1 { color:var(--gold); letter-spacing:2px; font-size:18px; margin:0 0 4px; }
+  .sub { color:var(--dim); font-size:12px; margin-bottom:20px; }
+  input { width:100%; padding:16px; font-family:inherit; font-size:18px; background:#132013; border:1px solid #2a4; color:var(--text); border-radius:8px; }
+  button { width:100%; margin-top:14px; background:var(--gold); color:#111; border:0; padding:16px; font-family:inherit; font-size:16px; letter-spacing:2px; cursor:pointer; border-radius:8px; }
+  .code { color:var(--gold); letter-spacing:4px; }
+  .ok { color:var(--green); font-size:20px; text-align:center; margin-top:20px; line-height:1.6; }
+  .err { color:#e06; font-size:14px; }
+</style>
+</head>
+<body>
+  <h1>FOOTY LEGENDS · JOIN</h1>
+  <div class="sub" id="roomline"></div>
+
+  <div id="form">
+    <input id="name" placeholder="Team name…" maxlength="24" autocomplete="off">
+    <button id="join">JOIN</button>
+    <div class="sub err" id="err"></div>
+  </div>
+
+  <div id="done" style="display:none">
+    <div class="ok">✓ You're in!<br>Waiting for the host to start…</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // ===== CONFIG (same three lines in host / join / display) =====
+    const SUPABASE_URL = "https://wrvbpxeuadalnflfygtk.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_DGcYVJ4eJWbrqmNSgyRQtA_49yrqbnp";
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // ===== helpers =====
+    function qp(n){ return new URLSearchParams(location.search).get(n); }
+    function safe(t){ const d=document.createElement("div"); d.textContent = t==null ? "" : String(t); return d.innerHTML; }
+
+    const code = (qp("room") || "").toUpperCase();
+    let room = null;
+
+    document.getElementById("roomline").innerHTML =
+      code ? ('ROOM <span class="code">' + safe(code) + '</span>') : "No room code in the link.";
+
+    (async function(){
+      if (!code) return;
+      const { data } = await db.from("rooms").select("*").eq("code", code).single();
+      if (!data){ document.getElementById("err").textContent = "Room not found. Check the code."; return; }
+      room = data;
+    })();
+
+    document.getElementById("join").onclick = async function(){
+      const name = document.getElementById("name").value.trim();
+      if (!name){ document.getElementById("err").textContent = "Enter a team name."; return; }
+      if (!room){ document.getElementById("err").textContent = "Room not ready yet — try again."; return; }
+      const { data, error } = await db.from("teams").insert({ room_id: room.id, name: name, role: "team" }).select().single();
+      if (error){ document.getElementById("err").textContent = error.message; return; }
+      localStorage.setItem("fl_team_id", data.id);
+      localStorage.setItem("fl_team_token", data.token || "");   // sekret drużyny (RLS: telefon edytuje tylko swój wpis)
+      localStorage.setItem("fl_room_id", room.id);
+      localStorage.setItem("fl_team_name", name);
+      localStorage.setItem("fl_room_code", code);
+      // auto-przejscie do ekranu gracza (czekanie -> draft)
+      location.href = "player.html?room=" + code;
+    };
+  </script>
+</body>
+</html>
