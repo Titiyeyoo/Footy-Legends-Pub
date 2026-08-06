@@ -158,8 +158,8 @@
   /* ── PRAWA KOLUMNA = PLAKAT FILMOWY ──────────────────────────────
      Blok narracji jest WYSRODKOWANY w przestrzeni nad lawka (auto-marginesy),
      tytul duzy, pod nim powietrze, opis w KROTKICH liniach, era nizej i slabsza. */
-  .col-story { flex:1 1 auto; min-width:0; min-height:0; max-width:none; padding-top:6px;
-    display:flex; flex-direction:column; overflow:hidden; }
+  .col-story { flex:1 1 auto; min-width:0; min-height:0; max-width:none; padding:6px 0 0 clamp(14px,2.4vw,42px);
+    display:flex; flex-direction:column; overflow:hidden; position:relative; z-index:2; }
   .story-name { margin-top:auto; font-size:clamp(24px,3.4vw,68px); color:var(--gold);
     line-height:1.25; letter-spacing:3px; opacity:0; transform:scale(.82);
     /* ikonka osobno, tekst zawija sie we WLASNEJ kolumnie — inaczej "XI" ladowalo pod gwiazdka */
