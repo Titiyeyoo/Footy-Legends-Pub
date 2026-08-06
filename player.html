@@ -172,7 +172,7 @@
     const { data: r } = await sb.from("rooms").select("*").eq("code", CODE).single();
     if (!r){ setCap("Room not found."); return; }
     room = r;
-    TIMER_SECONDS = (r.timer_seconds != null ? r.timer_seconds : 90);
+    TIMER_SECONDS = 90;   // na sztywno 90 (jak na TV; rooms.timer_seconds bywa ~60)
 
     if (r.status === "ended"){
       if (!ended){
