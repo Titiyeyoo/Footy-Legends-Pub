@@ -470,7 +470,7 @@
       if (sndPrevDeadline == null && draftDeadlineMs != null){ soundStart(); sndLastBeepSec = null; }  // pierwszy lock -> dzwiek startu
       sndPrevDeadline = draftDeadlineMs;
       const rem = Math.max(0, Math.round((draftDeadlineMs - Date.now())/1000));
-      badge.style.display = "";
+      badge.style.display = "block";
       badge.innerHTML = rem + '<span class="drt-unit">SECONDS TO LOCK IN</span>';
       badge.className = "dr-timer" + (rem <= 10 ? " low" : "");
       if (rem <= 10 && rem >= 1 && rem !== sndLastBeepSec){ soundBeep(rem); sndLastBeepSec = rem; }      // pikanie 10..1
