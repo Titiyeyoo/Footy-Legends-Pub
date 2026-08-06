@@ -88,12 +88,16 @@
   /* ── TABLICA RUNDY (krok 0): kto gra, wyniki zakryte ── */
   /* ── BUDOWANIE SKLADOW (kto zalockowal) ── */
   #drafting { display:none; width:100%; max-width:1000px; text-align:center; }
-  .dr-timer { display:none; margin:1vh auto 2.5vh; font-family:var(--px,inherit); color:var(--gold,#e9c46a);
-    font-size:clamp(40px,9vw,120px); letter-spacing:2px; line-height:1;
-    padding:1.4vh 3vw; border:2px solid #2a4; border-radius:16px;
-    background:rgba(19,32,19,.55); box-shadow:0 0 40px rgba(233,196,106,.15); }
-  .dr-timer .drt-unit { font-size:.24em; letter-spacing:3px; color:var(--dim,#8a8576); display:block; margin-top:.7em; }
-  .dr-timer.low { color:#ff5a5a; border-color:#ff5a5a; box-shadow:0 0 50px rgba(255,90,90,.25); animation:drtpulse .5s infinite alternate; }
+  .dr-timer { display:none; width:80%; max-width:780px; margin:.5vh auto 2.4vh; }
+  .drt-row { display:flex; align-items:center; gap:16px; }
+  .drt-track { flex:1 1 auto; height:22px; background:#0c160b; border:1px solid #2a4; border-radius:6px; overflow:hidden; }
+  .drt-fill { height:100%; width:100%; background:var(--gold,#e9c46a); transition:width .5s linear; }
+  .drt-num { flex:0 0 auto; min-width:2.6em; text-align:right; font-family:var(--px,inherit); color:var(--gold,#e9c46a); font-size:clamp(22px,3.2vw,44px); letter-spacing:1px; }
+  .drt-label { text-align:center; font-family:var(--px,inherit); color:var(--dim,#8a8576); font-size:9px; letter-spacing:3px; margin-top:8px; }
+  .dr-timer.low .drt-fill { background:#ff5a5a; }
+  .dr-timer.low .drt-num  { color:#ff5a5a; }
+  .dr-timer.low .drt-track{ border-color:#ff5a5a; }
+  .dr-timer.low { animation:drtpulse .5s infinite alternate; }
   .sound-hint { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); z-index:80;
     font-family:inherit; font-size:11px; letter-spacing:1px; color:var(--dim,#8a8576);
     background:rgba(0,0,0,.45); padding:5px 12px; border-radius:20px; }
@@ -380,7 +384,13 @@
   <div id="drafting">
     <div class="dr-title" id="dr-title">ROUND 1 · BUILDING XI</div>
     <div class="dr-sub" id="dr-sub">30 legends each · pick your 11 · lock it in</div>
-    <div class="dr-timer" id="dr-timer"></div>
+    <div class="dr-timer" id="dr-timer">
+      <div class="drt-row">
+        <div class="drt-track"><div class="drt-fill" id="drt-fill"></div></div>
+        <div class="drt-num" id="drt-num"></div>
+      </div>
+      <div class="drt-label">SECONDS TO LOCK IN</div>
+    </div>
     <div id="dr-rows" class="dr-rows"></div>
   </div>
 
@@ -430,6 +440,7 @@
     let roomId = null;
     let mode = "lobby";     // lobby | board:R | card:R:S | table:R | finale
     let draftDeadlineMs = null, draftTimerSecs = 90;   // TIMER DRAFTU na TV
+    let draftAllLocked = false;                        // wszyscy zalockowali -> zegar znika
     let sndPrevDeadline = null, sndLastBeepSec = null; // stan dzwieku zegara
 
     // ── DŹWIĘK: synteza Web Audio (jak solo Quick Quiz) — zero plikow, zero licencji, zero zewnetrznych zaleznosci ──
@@ -459,20 +470,26 @@
     ["click","touchstart","keydown"].forEach(function(ev){ document.addEventListener(ev, unlockAudio, { once:true }); });
 
     function tickDraftTimer(){
-      const badge = document.getElementById("dr-timer");
-      if (!badge) return;
+      const box = document.getElementById("dr-timer");
+      if (!box) return;
       const onDraft = (typeof mode === "string" && mode.indexOf("drafting:") === 0);
-      if (!onDraft || draftDeadlineMs == null){
-        badge.style.display = "none";
+      // stop: nie na drafcie / brak startu / WSZYSCY zalockowali
+      if (!onDraft || draftDeadlineMs == null || draftAllLocked){
+        box.style.display = "none";
         sndPrevDeadline = draftDeadlineMs;   // null -> nowa runda znow zagra start
         return;
       }
       if (sndPrevDeadline == null && draftDeadlineMs != null){ soundStart(); sndLastBeepSec = null; }  // pierwszy lock -> dzwiek startu
       sndPrevDeadline = draftDeadlineMs;
       const rem = Math.max(0, Math.round((draftDeadlineMs - Date.now())/1000));
-      badge.style.display = "block";
-      badge.innerHTML = rem + '<span class="drt-unit">SECONDS TO LOCK IN</span>';
-      badge.className = "dr-timer" + (rem <= 10 ? " low" : "");
+      const total = draftTimerSecs || 90;
+      const pct = Math.max(0, Math.min(100, (rem/total)*100));
+      box.style.display = "block";
+      const fill = document.getElementById("drt-fill");
+      const num  = document.getElementById("drt-num");
+      if (fill) fill.style.width = pct + "%";
+      if (num)  num.textContent = rem + "s";
+      box.className = "dr-timer" + (rem <= 10 ? " low" : "");
       if (rem <= 10 && rem >= 1 && rem !== sndLastBeepSec){ soundBeep(rem); sndLastBeepSec = rem; }      // pikanie 10..1
       else if (rem === 0 && sndLastBeepSec !== 0){ soundEnd(); sndLastBeepSec = 0; }                     // buzzer na zero (raz)
     }
@@ -1029,6 +1046,7 @@
       el("rv-crown").classList.remove("shown");
       el("dr-title").textContent = "ROUND " + room.current_round + " \u00b7 BUILDING XI";
       draftDeadlineMs = null;   // nowa runda -> zegar dopiero od pierwszego locka
+      draftAllLocked = false;
       showOnly("drafting");
       refreshDrafting(room);
     }
@@ -1044,7 +1062,7 @@
         try {
           const { data: firstE } = await db.from("entries").select("locked_at")
             .eq("round_id", round.id).order("locked_at", { ascending:true }).limit(1);
-          draftTimerSecs = (room && room.timer_seconds != null) ? room.timer_seconds : 90;
+          draftTimerSecs = 90;   // na sztywno 90 (rooms.timer_seconds bywa ~60; konfiguracja wroci przy rytmie)
           draftDeadlineMs = (firstE && firstE[0] && firstE[0].locked_at)
             ? new Date(firstE[0].locked_at).getTime() + draftTimerSecs*1000 : null;
         } catch(e){ draftDeadlineMs = null; }
@@ -1052,6 +1070,7 @@
       const { data: teams } = await db.from("teams").select("*").eq("room_id", roomId).order("created_at");
       const playing = (teams || []).filter(function(t){ return t.role !== "spectator"; });
       const done = playing.filter(function(t){ return lockedIds[t.id]; }).length;
+      draftAllLocked = (playing.length > 0 && done >= playing.length);   // komplet -> zegar znika
       el("dr-sub").textContent = done + " OF " + playing.length + " LOCKED IN \u00b7 30 LEGENDS EACH \u00b7 PICK YOUR 11";
       el("drafting").className = playing.length > 6 ? "dense" : "";
       el("dr-rows").innerHTML = playing.map(function(t){
