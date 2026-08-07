@@ -105,14 +105,14 @@
   .dr-title { color:var(--gold); font-size:20px; letter-spacing:5px; margin-bottom:10px; }
   .dr-sub { color:var(--dim); font-size:10px; letter-spacing:3px; margin-bottom:32px; }
   .dr-rows { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
-  .dr-team { display:flex; align-items:center; justify-content:space-between; gap:16px;
-             background:#0d160d; border:1px solid #1f2e1f; border-radius:10px; padding:16px 20px;
+  .dr-team { display:flex; flex-direction:column; align-items:flex-start; gap:5px;
+             background:#0d160d; border:1px solid #1f2e1f; border-radius:10px; padding:14px 18px;
              transition:background .3s, border-color .3s; }
-  /* nazwa elastyczna, status w STALEJ kolumnie po prawej — dzieki temu "✓ LOCKED"
-     jest wyrownany w kazdym wierszu, niezaleznie od dlugosci nazwy druzyny */
-  .dr-name { flex:1 1 auto; min-width:0; font-size:15px; color:var(--text); letter-spacing:1px; text-align:left;
-             overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .dr-flag { flex:0 0 auto; width:9.5em; text-align:right; font-size:11px; letter-spacing:2px; }
+  /* nazwa w PELNEJ szerokosci karty (moze zlamac sie na 2 linie), status PONIZEJ —
+     zamiast sciskac obie rzeczy w jednej linii i uciac nazwe wielokropkiem */
+  .dr-name { width:100%; font-size:15px; color:var(--text); letter-spacing:1px; text-align:left;
+             overflow-wrap:break-word; line-height:1.25; }
+  .dr-flag { width:auto; text-align:left; font-size:11px; letter-spacing:2px; }
   .dr-team.locked { background:linear-gradient(180deg,#12210f,#0c160b); border-color:#2a4; }
   .dr-team.locked .dr-name { color:var(--green); }
   .dr-team.locked .dr-flag { color:var(--green); }
@@ -629,8 +629,8 @@
       // roundview/lobby/connect/loading = flex, reszta block. NIGDY "" — CSS ma display:none
       if (n) n.style.display = (id === "lobby" || id === "connect" || id === "roundview" || id === "loading") ? "flex" : "block";
       document.body.classList.toggle("mode-tv", id !== "lobby" && id !== "connect");
-      // przycisk CHANGE ROOM widoczny tylko gdy jestesmy w grze (nie na ekranie wpisania kodu)
-      const cr = el("changeroom"); if (cr) cr.style.display = (id === "connect") ? "none" : "";
+      // przycisk CHANGE ROOM widoczny TYLKO na ekranie laczenia (nie w trakcie gry — zeby nikt go nie kliknal przypadkiem i nie odpial TV od pokoju)
+      const cr = el("changeroom"); if (cr) cr.style.display = (id === "connect") ? "" : "none";
     }
 
 
