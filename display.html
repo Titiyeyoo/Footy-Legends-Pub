@@ -1250,7 +1250,7 @@
     // ===== ETAP A: reveal leci SAM =====
     // display prowadzi te same runBoard/runCard/runTitlesTable po kolei na wlasnym zegarze
     // (zamiast czekac az host klika NEXT REVEAL). Zero nowych stanow, zero nowego renderu.
-    const REVEAL_GAP = 2600;   // pauza miedzy krokami, zeby sala zdazyla zareagowac
+    const REVEAL_GAP = 4500;   // pauza miedzy krokami (2600->4500 po tescie na zywo: karty zbyt szybko schodzily)
     async function runRevealAuto(room){
       const tag = "revealauto:" + room.current_round;
       if (mode === tag) return;                 // juz leci -> nie odpalaj drugi raz (guard re-entry z pollingu)
