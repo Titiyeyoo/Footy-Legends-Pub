@@ -1027,8 +1027,7 @@
       if (room.status === "ended"){
         if (mode !== "finale"){ mode = "finale"; runFinale(room); }
       } else if (room.status === "reveal"){
-        const want = (step === 0) ? ("board:" + room.current_round) : ("card:" + room.current_round + ":" + step);
-        if (mode !== want){ mode = want; (step === 0) ? runBoard(room) : runCard(room, step); }
+        runRevealAuto(room);   // ETAP A: display prowadzi caly reveal sam (guard mode===tag w srodku); ignoruje reveal_step
       } else if (room.status === "table"){
         const want = "table:" + room.current_round;
         if (mode !== want){ mode = want; runTitlesTable(room); }
@@ -1246,6 +1245,34 @@
         if (bench){ await sleep(300); bench.classList.add("in"); }
       } catch(err){ rvError("CARD ERROR: " + (err.message||err)); console.error(err); }
       busy = false;
+    }
+
+    // ===== ETAP A: reveal leci SAM =====
+    // display prowadzi te same runBoard/runCard/runTitlesTable po kolei na wlasnym zegarze
+    // (zamiast czekac az host klika NEXT REVEAL). Zero nowych stanow, zero nowego renderu.
+    const REVEAL_GAP = 2600;   // pauza miedzy krokami, zeby sala zdazyla zareagowac
+    async function runRevealAuto(room){
+      const tag = "revealauto:" + room.current_round;
+      if (mode === tag) return;                 // juz leci -> nie odpalaj drugi raz (guard re-entry z pollingu)
+      mode = tag;                               // ustawione synchronicznie, zanim funkcja odda sterowanie
+      try {
+        await runBoard(room);                                   // 1) plansza "gdzie skonczyliscie"
+        if (mode !== tag) return;                               // przerwane (np. host skoczyl do tabeli)
+        const D = await roundData(room);
+        const show = showCountFor(D.ranked.length);             // ile kart (TOP 3 albo mniej przy <=3)
+        for (let s = 1; s <= show; s++){
+          if (mode !== tag) return;
+          await sleep(REVEAL_GAP);
+          if (mode !== tag) return;
+          await runCard(room, s);                               // 2) karta po karcie, od dolu w gore
+        }
+        if (mode !== tag) return;
+        await sleep(REVEAL_GAP);
+        if (mode !== tag) return;
+        runTitlesTable(room);                                   // 3) auto-przejscie do tabeli
+        // mode ZOSTAJE = tag: tabela stoi, router nie odpala revealu drugi raz;
+        // wyjscie nastepuje gdy host klika NEXT ROUND (status->playing, nowa runda)
+      } catch(err){ rvError("REVEAL AUTO ERROR: " + (err.message||err)); console.error(err); }
     }
 
     // teletext: litera po literze, twardy limit ~2.5s (Press Start 2P jest szeroki)
