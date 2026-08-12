@@ -1250,7 +1250,8 @@
     // ===== ETAP A: reveal leci SAM =====
     // display prowadzi te same runBoard/runCard/runTitlesTable po kolei na wlasnym zegarze
     // (zamiast czekac az host klika NEXT REVEAL). Zero nowych stanow, zero nowego renderu.
-    const REVEAL_GAP = 4500;   // pauza miedzy krokami (2600->4500 po tescie na zywo: karty zbyt szybko schodzily)
+    const REVEAL_GAP = 4500;       // pauza po planszy i miedzy nizszymi kartami (3./2.)
+    const REVEAL_GAP_WIN = 6500;   // ZWYCIEZCA rundy zostaje dluzej (chwila chwaly przed tabela)
     async function runRevealAuto(room){
       const tag = "revealauto:" + room.current_round;
       if (mode === tag) return;                 // juz leci -> nie odpalaj drugi raz (guard re-entry z pollingu)
@@ -1267,7 +1268,7 @@
           await runCard(room, s);                               // 2) karta po karcie, od dolu w gore
         }
         if (mode !== tag) return;
-        await sleep(REVEAL_GAP);
+        await sleep(REVEAL_GAP_WIN);   // zwyciezca rundy zostaje dluzej przed tabela
         if (mode !== tag) return;
         runTitlesTable(room);                                   // 3) auto-przejscie do tabeli
         // mode ZOSTAJE = tag: tabela stoi, router nie odpala revealu drugi raz;
