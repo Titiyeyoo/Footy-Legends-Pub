@@ -62,6 +62,9 @@
     <div id="startbar" style="margin-top:20px;display:none">
       <button id="startbtn" style="width:100%;background:var(--gold);color:#111;border:0;padding:16px;font-family:inherit;font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:6px">▶ START GAME</button>
     </div>
+    <div id="skipbar" style="margin-top:14px;display:none">
+      <button id="skipbtn" style="width:100%;background:linear-gradient(180deg,#f4d788,#e9c46a);color:#111;border:0;padding:30px 16px;font-family:inherit;font-size:20px;letter-spacing:3px;cursor:pointer;border-radius:10px;box-shadow:0 4px 0 #b8963f">&#9197; SKIP</button>
+    </div>
     <div id="roundinfo" class="count" style="margin-top:20px;display:none"></div>
     <div id="stepbar" style="margin-top:14px;display:none">
       <button id="stepbtn" style="width:100%;background:linear-gradient(180deg,#f4d788,#e9c46a);color:#111;border:0;padding:34px 16px;font-family:inherit;font-size:22px;letter-spacing:3px;cursor:pointer;border-radius:10px;box-shadow:0 4px 0 #b8963f">&#9654; NEXT REVEAL</button>
@@ -179,6 +182,14 @@
       const { error } = await db.from("rooms").update({ reveal_step: revealStep }).eq("id", roomId);
       if (error){ alert("Step error: " + error.message); revealStep--; btn.disabled = false; return; }
       paintButtons("reveal");   // po zwyciezcy pokaze NEXT ROUND / TABLE / END
+    };
+
+    // ETAP A slice 2: SKIP — jeden przycisk, dyspozytor wg stanu, reuzywa istniejace funkcje (zero nowych stanow)
+    document.getElementById("skipbtn").onclick = async function(){
+      if (!roomId) return;
+      if (roomStatus === "playing"){ await revealRound(); }        // draft -> reveal (z guardem "nie wszyscy zalockowali")
+      else if (roomStatus === "reveal"){ await showTitles(); }     // reveal -> tabela (przeskok)
+      else if (roomStatus === "table"){ await nextRound(); }       // tabela -> nastepna runda
     };
 
     document.getElementById("revealbtn").onclick = revealRound;
@@ -345,6 +356,12 @@
       const nnb = document.getElementById("newnightbar");
       sb.style.display = "none"; rb.style.display = "none"; nb.style.display = "none"; eb.style.display = "none"; tb.style.display = "none"; stp.style.display = "none";
       if (nnb) nnb.style.display = "none";
+      // ETAP A slice 2: SKIP — jeden przycisk zamiast klikania reveal/table/next, opis wg stanu
+      const _skb = document.getElementById("skipbar"), _skbtn = document.getElementById("skipbtn");
+      if (status === "playing"){ _skbtn.disabled=false; _skbtn.innerHTML="&#9197; SKIP TO RESULTS"; _skb.style.display=""; }
+      else if (status === "reveal"){ _skbtn.disabled=false; _skbtn.innerHTML="&#9197; SKIP TO TABLE"; _skb.style.display=""; }
+      else if (status === "table"){ _skbtn.disabled=false; _skbtn.innerHTML="&#9197; NEXT ROUND"; _skb.style.display=""; }
+      else { _skb.style.display="none"; }
       if (status === "ended"){
         ri.style.display = ""; ri.textContent = "\u{1F3C1} NIGHT ENDED \u00b7 OVERALL TABLE ON THE BIG SCREEN";
         if (nnb) nnb.style.display = "";     // wyjscie ze slepego zaulka — bez odswiezania strony
