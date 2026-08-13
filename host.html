@@ -143,6 +143,38 @@
     let revealStep = 0;
     let showCount  = 0;
     // ile druzyn gra i ile juz zalockowalo w biezacej rundzie
+    // AUTO-REVEAL: gdy wszystkie GRAJACE druzyny zalockuja (albo minie deadline draftu) -> reveal SAM, bez klikania.
+    // Puste sloty z lobby / nieobecni: wykluczeni przez deadline (nie blokuja). SKIP dalej przepycha wczesniej.
+    let autoRevealing = false;
+    async function doReveal(){   // sam zapis reveal, bez confirm (uzywane przez auto-reveal)
+      revealStep = 0;
+      await loadRankCount();
+      const { error } = await db.from("rooms").update({ status:"reveal", reveal_step:0 }).eq("id", roomId);
+      if (error){ console.error("auto-reveal:", error.message); return; }
+      paintButtons("reveal");
+    }
+    async function maybeAutoReveal(){
+      if (!roomId || roomStatus !== "playing" || autoRevealing) return;
+      const st = await lockStats();               // teams = nie-spectator; locked = wpisy tej rundy
+      if (st.locked < 1) return;                  // nic do odsloniecia
+      let go = (st.locked >= st.teams);           // wszyscy grajacy zalockowali -> reveal od razu
+      if (!go){
+        // wyklucz PUSTE SLOTY: po deadline draftu odslon z tym, co jest (nieobecni = 0, nie blokuja)
+        const { data: rd } = await db.from("rounds").select("id").eq("room_id", roomId).eq("round_number", currentRound).maybeSingle();
+        if (rd){
+          const { data: e } = await db.from("entries").select("locked_at").eq("round_id", rd.id).order("locked_at",{ ascending:true }).limit(1);
+          if (e && e[0] && e[0].locked_at){
+            const deadline = new Date(e[0].locked_at).getTime() + 90000;   // TIMER_SECONDS=90, jak telefon/TV
+            if (Date.now() > deadline + 1500) go = true;
+          }
+        }
+      }
+      if (go && roomStatus === "playing" && !autoRevealing){
+        autoRevealing = true;
+        try { await doReveal(); } finally { autoRevealing = false; }
+      }
+    }
+
     async function lockStats(){
       const out = { teams:0, locked:0 };
       const { data: ts } = await db.from("teams").select("id,role").eq("room_id", roomId);
@@ -341,6 +373,7 @@
           .subscribe();
       } catch(e){}
       setInterval(loadTeams, 2000);
+      setInterval(maybeAutoReveal, 2000);   // AUTO-REVEAL: reveal sam gdy wszyscy grajacy zalockuja / po deadline
     }
 
     // ustaw przyciski wg stanu pokoju (dziala takze po odswiezeniu)
