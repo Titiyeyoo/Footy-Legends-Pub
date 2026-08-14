@@ -119,7 +119,7 @@
     let currentRound = 0;
     document.getElementById("newgame").onclick = createRoom;
     // po zakonczeniu wieczoru: swieza gra bez odswiezania strony
-    document.getElementById("newnightbtn").onclick = resetGame;   // reset w miejscu (staly link), nie nowy pokoj
+    document.getElementById("newnightbtn").onclick = createRoom;   // TYMCZASOWO wrocone do nowego pokoju (reset-w-miejscu wymaga poprawki w join.html: telefon musi sprawdzic czy druzyna istnieje). resetGame() zostaje w kodzie, uspione.
     document.getElementById("startbtn").onclick = startGame;
 
     async function startGame(){
