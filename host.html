@@ -119,7 +119,7 @@
     let currentRound = 0;
     document.getElementById("newgame").onclick = createRoom;
     // po zakonczeniu wieczoru: swieza gra bez odswiezania strony
-    document.getElementById("newnightbtn").onclick = createRoom;   // TYMCZASOWO wrocone do nowego pokoju (reset-w-miejscu wymaga poprawki w join.html: telefon musi sprawdzic czy druzyna istnieje). resetGame() zostaje w kodzie, uspione.
+    document.getElementById("newnightbtn").onclick = resetGame;   // reset w miejscu (staly link); join.html sprawdza teraz czy druzyna istnieje
     document.getElementById("startbtn").onclick = startGame;
 
     async function startGame(){
@@ -344,6 +344,9 @@
         { const { error } = await db.from("rounds").delete().eq("room_id", roomId); if (error) throw new Error("rounds \u2013 " + error.message); }
         { const { error } = await db.from("teams").delete().eq("room_id", roomId);   if (error) throw new Error("teams \u2013 " + error.message); }
         { const { error } = await db.from("rooms").update({ status:"lobby", current_round:1, reveal_step:0 }).eq("id", roomId); if (error) throw new Error("room \u2013 " + error.message); }
+        // WERYFIKACJA: RLS potrafi CICHO skasowac 0 wierszy BEZ bledu -> upewnij sie ze druzyny naprawde znikly
+        { const { data: leftT } = await db.from("teams").select("id").eq("room_id", roomId).limit(1);
+          if (leftT && leftT.length){ throw new Error("teams \u2013 nie skasowane (RLS cicho zablokowal delete); potrzebna polityka DELETE dla hosta po room_id"); } }
         try { localStorage.setItem("fl_host_room", roomCode); } catch(e){}   // END mogl usunac klucz -> przywroc, by reload trafil w ten sam pokoj
         location.reload();   // czysty swiezy lobby z bazy (ten sam pokoj/kod/link), zero ducha starego stanu
       } catch(err){
