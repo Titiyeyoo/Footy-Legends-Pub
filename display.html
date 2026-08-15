@@ -1035,6 +1035,9 @@
         const want = "drafting:" + room.current_round;
         if (mode !== want){ mode = want; runDrafting(room); }
         else { refreshDrafting(room); }   // to samo mode -> tylko odswiez ptaszki
+      } else if (room.status === "lobby"){
+        // NEW NIGHT reset: pokoj wrocil do lobby -> TV SAM wraca do QR/lobby (nikt nie dotyka karty)
+        if (mode !== "lobby"){ backToLobby(); }
       }
     }
 
