@@ -12,12 +12,13 @@
      Wzor wziety wprost z Twojego widoku Classic solo (#cl-view-pitch .pname).
      Do przeniesienia do solo, jesli zechcesz spojnosci. */
   #s-xad .pdot .pname{
-    /* Zamiast rozjezdzac sie w bok (max-width:96px -> sasiednie etykiety sie zderzaly),
-       waskie pole + ZAWIJANIE w dol: dlugie nazwisko idzie na 2-3 linie, w calosci, bez kolizji. */
-    white-space:normal; word-break:break-word; line-height:1.03;
-    max-width:72px; font-size:6.5px; letter-spacing:0; text-align:center;
+    /* Zamiast rozjezdzac sie w bok (sasiednie etykiety sie zderzaly), waskie pole + ZAWIJANIE w dol:
+       dlugie nazwisko idzie na 2-3 linie, w calosci, bez kolizji z sasiadem. */
+    white-space:normal; word-break:break-word; line-height:1.0;
+    max-width:64px; letter-spacing:0; text-align:center;
     display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
   }
+  #s-xad .filled .pname{ font-size:7px; }   /* nazwiska zawodnikow czytelne, ale wezsze niz bazowe 8px */
   #s-xad .xad-col-pitch.shrunk .pdot .pname{
     font-size:6px; max-width:80px; letter-spacing:0; margin-top:5px;
   }
