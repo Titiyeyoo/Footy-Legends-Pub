@@ -119,6 +119,20 @@
         returning = false;
         showForm();
       }
+      // NEW NIGHT reset: pokoj TEN SAM, ale druzyna mogla zostac SKASOWANA -> sprawdz czy jeszcze istnieje.
+      // Bez tego telefon witalby "welcome back" i wracal do nieistniejacej druzyny (rozjazd stanu).
+      if (returning){
+        try {
+          const { data: team, error } = await db.from("teams").select("id").eq("id", savedTeamId).maybeSingle();
+          if (!error && !team){   // DEFINITYWNIE nie ma (nie blad sieci) -> traktuj jak NOWEGO gracza
+            returning = false;
+            localStorage.removeItem("fl_team_id");
+            localStorage.removeItem("fl_team_token");
+            localStorage.removeItem("fl_team_name");
+            showForm();
+          }
+        } catch(e){ /* blad sieci — NIE ruszaj wracajacego (odporne na slabe wifi) */ }
+      }
     })();
 
     // licznik znakow na zywo — gracz widzi limit, nie tylko go czuje
