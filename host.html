@@ -126,17 +126,23 @@
       if (!roomId || started) return;
       const btn = document.getElementById("startbtn");
       btn.disabled = true; btn.textContent = "STARTING…";
-      // 1) utworz runde 1
-      const { error: rErr } = await db.from("rounds").insert({
-        room_id: roomId, round_number: 1, theme: "england", status: "rolling"
-      });
-      if (rErr){ alert("Round error: " + rErr.message); btn.disabled=false; btn.textContent="▶ START GAME"; return; }
-      // 2) przelacz pokoj w tryb gry
-      const { error: uErr } = await db.from("rooms").update({ status: "playing", current_round: 1 }).eq("id", roomId);
-      if (uErr){ alert("Room error: " + uErr.message); btn.disabled=false; btn.textContent="▶ START GAME"; return; }
-      started = true;
-      currentRound = 1;
-      paintButtons("playing");
+      // BEZPIECZNIK: jak Supabase zawiśnie (bez błędu, po prostu nie odpowiada), odblokuj przycisk po 10s
+      // zamiast zostawiac "STARTING…" na zawsze (dawniej ratowal tylko refresh).
+      let done = false;
+      const failsafe = setTimeout(function(){ if (!done && !started){ btn.disabled=false; btn.textContent="▶ START GAME"; } }, 10000);
+      try {
+        const { error: rErr } = await db.from("rounds").insert({ room_id: roomId, round_number: 1, theme: "england", status: "rolling" });
+        if (rErr) throw new Error("Round: " + rErr.message);
+        const { error: uErr } = await db.from("rooms").update({ status: "playing", current_round: 1 }).eq("id", roomId);
+        if (uErr) throw new Error("Room: " + uErr.message);
+        done = true; clearTimeout(failsafe);
+        started = true; currentRound = 1;
+        paintButtons("playing");
+      } catch(err){
+        done = true; clearTimeout(failsafe);
+        btn.disabled = false; btn.textContent = "▶ START GAME";
+        alert("Couldn't start: " + (err.message || err));
+      }
     }
 
     // ile kart pokazuje TV w tej rundzie (<=5 druzyn = wszyscy, 6+ = TOP 3)
@@ -438,23 +444,13 @@
         ri.style.display = "none";
       } else if (status === "playing"){
         ri.style.display = ""; ri.textContent = "● ROUND " + currentRound + " · IN PLAY";
-        const rv = document.getElementById("revealbtn");
-        rv.disabled = false; rv.textContent = "★ REVEAL RESULTS";
-        rb.style.display = "";
+        eb.style.display = "";   // reveal odpala sie sam / SKIP TO RESULTS; zostaje END TONIGHT
       } else if (status === "table"){
-        // tabela tytulow -> pelny zestaw sterowania
         ri.style.display = ""; ri.textContent = "\u{1F4CB} TITLES TABLE ON THE BIG SCREEN";
-        showRoundControls();
+        eb.style.display = "";   // NEXT ROUND = SKIP; zostaje END TONIGHT
       } else if (status === "reveal"){
-        // reveal -> SHOWMAN: dopoki zwyciezca nie odsloniety, tylko jeden wielki przycisk
-        const winnerUp = (revealStep >= showCount && showCount > 0);
-        if (winnerUp){
-          ri.style.display = ""; ri.textContent = "\u2605 WINNER'S UP \u00b7 CARRY ON WHEN READY";
-          showRoundControls();
-        } else {
-          ri.style.display = ""; ri.textContent = "\u25cf REVEALING ON THE BIG SCREEN";
-          paintStep();   // pokazuje/chowa wielki przycisk NEXT REVEAL
-        }
+        ri.style.display = ""; ri.textContent = "\u25cf REVEALING ON THE BIG SCREEN";
+        eb.style.display = "";   // reveal leci sam; SKIP TO TABLE gdy chcesz uciac
       }
     }
 
