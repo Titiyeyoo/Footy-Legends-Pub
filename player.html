@@ -12,13 +12,13 @@
      Wzor wziety wprost z Twojego widoku Classic solo (#cl-view-pitch .pname).
      Do przeniesienia do solo, jesli zechcesz spojnosci. */
   #s-xad .pdot .pname{
-    /* Zamiast rozjezdzac sie w bok (sasiednie etykiety sie zderzaly), waskie pole + ZAWIJANIE w dol:
-       dlugie nazwisko idzie na 2-3 linie, w calosci, bez kolizji z sasiadem. */
-    white-space:normal; word-break:break-word; line-height:1.0;
-    max-width:64px; letter-spacing:0; text-align:center;
-    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+    /* Mala czcionka -> nazwiska mieszcza sie w JEDNEJ linii (koniec brzydkiego lamania w srodku slowa).
+       word-break:normal = nie tnij slowa w srodku; lamie tylko na myslniku (np. Alexander-Arnold). */
+    white-space:normal; word-break:normal; overflow-wrap:break-word; line-height:1.05;
+    max-width:70px; letter-spacing:0; text-align:center;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
   }
-  #s-xad .filled .pname{ font-size:7px; }   /* nazwiska zawodnikow czytelne, ale wezsze niz bazowe 8px */
+  #s-xad .filled .pname{ font-size:6px; }   /* nazwiska w jednej linii; z myslnikiem lamia sie naturalnie */
   #s-xad .xad-col-pitch.shrunk .pdot .pname{
     font-size:6px; max-width:80px; letter-spacing:0; margin-top:5px;
   }
@@ -81,7 +81,7 @@
 
   <!-- ekran gdy host odpalil reveal, a ten telefon nie zdazyl zalockowac -->
   <div id="fld-reveal" style="display:none;text-align:center;padding:60px 20px">
-    <div style="color:var(--gold);font-family:var(--px);font-size:14px;letter-spacing:1px;line-height:2">\u2605 REVEAL TIME</div>
+    <div style="color:var(--gold);font-family:var(--px);font-size:14px;letter-spacing:1px;line-height:2">&#9733; REVEAL TIME</div>
     <div style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:14px">Eyes on the big screen…</div>
   </div>
 
