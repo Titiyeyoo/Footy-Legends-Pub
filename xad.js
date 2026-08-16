@@ -598,8 +598,13 @@ function render(animate, justJumped){
 }
 // na boisku pokazujemy nazwisko (krótko); pełne imię i tak jest w puli
 function lastName(full){
+  const SUFFIX = new Set(["sr","snr","jr","jnr","ii","iii","iv","v"]);
   const parts = String(full).trim().split(/\s+/);
-  return parts.length>1 ? parts[parts.length-1] : full;
+  if (parts.length <= 1) return full;
+  let i = parts.length - 1;
+  // pomijaj przyrostki (Sr/Jr/II...) na koncu -> bierz wlasciwe nazwisko ("Frank Lampard Sr" -> "Lampard")
+  while (i > 0 && SUFFIX.has(parts[i].toLowerCase().replace(/\./g,""))) i--;
+  return parts[i];
 }
 function escXad(s){
   if(typeof escapeHtml==="function") return escapeHtml(s);
