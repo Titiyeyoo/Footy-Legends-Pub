@@ -598,13 +598,8 @@ function render(animate, justJumped){
 }
 // na boisku pokazujemy nazwisko (krótko); pełne imię i tak jest w puli
 function lastName(full){
-  const SUFFIX = new Set(["sr","snr","jr","jnr","ii","iii","iv","v"]);
   const parts = String(full).trim().split(/\s+/);
-  if (parts.length <= 1) return full;
-  let i = parts.length - 1;
-  // pomijaj przyrostki (Sr/Jr/II...) na koncu -> bierz wlasciwe nazwisko ("Frank Lampard Sr" -> "Lampard")
-  while (i > 0 && SUFFIX.has(parts[i].toLowerCase().replace(/\./g,""))) i--;
-  return parts[i];
+  return parts.length>1 ? parts[parts.length-1] : full;
 }
 function escXad(s){
   if(typeof escapeHtml==="function") return escapeHtml(s);
@@ -644,6 +639,18 @@ function isMythic(narrK, count){
   const share = count/11, completion = count/total;
   return share >= 0.90 || (completion >= 1.0 && total <= 9 && share >= 0.55);
 }
+
+// ── PUB reveal (Story-driven): rozbicie wyniku na BAZE (wszystko oprocz narracji) i HISTORIE (w2) ──
+// Uzycie w display: base = entries.score - flStoryBonus(xiNames).story. Zwraca tez nazwe/emoji glownej narracji.
+function flStoryBonus(xiNames){
+  try{
+    const det = detect(xiNames || []);
+    if(!det || !det.main) return { story:0, name:null, emoji:null };
+    const N = NARRATIVES[det.main];
+    return { story: Math.round(w2(det.main, det.counts[det.main])), name: N ? N.name : det.main, emoji: N ? (N.emoji||null) : null };
+  }catch(e){ return { story:0, name:null, emoji:null }; }
+}
+if (typeof window !== "undefined") window.flStoryBonus = flStoryBonus;
 
 /* ── SCORING W1 + W2 + W3 ─────────────────────────────────────────── */
 function w1(xiPlayers){
