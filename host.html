@@ -62,8 +62,9 @@
     <div id="startbar" style="margin-top:20px;display:none">
       <button id="startbtn" style="width:100%;background:var(--gold);color:#111;border:0;padding:16px;font-family:inherit;font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:6px">▶ START GAME</button>
     </div>
-    <div id="skipbar" style="margin-top:14px;display:none">
-      <button id="skipbtn" style="width:100%;background:linear-gradient(180deg,#f4d788,#e9c46a);color:#111;border:0;padding:30px 16px;font-family:inherit;font-size:20px;letter-spacing:3px;cursor:pointer;border-radius:10px;box-shadow:0 4px 0 #b8963f">&#9197; SKIP</button>
+    <div id="skipbar" style="margin-top:14px;display:none;text-align:center">
+      <!-- Hit-area TYLKO na przycisku (nie full-width) — chroni przed przypadkowym tapem na telefonie -->
+      <button id="skipbtn" style="display:inline-block;width:auto;min-width:160px;max-width:280px;background:linear-gradient(180deg,#f4d788,#e9c46a);color:#111;border:0;padding:14px 22px;font-family:inherit;font-size:14px;letter-spacing:2px;cursor:pointer;border-radius:8px;box-shadow:0 3px 0 #b8963f">&#9197; SKIP</button>
     </div>
     <div id="roundinfo" class="count" style="margin-top:20px;display:none"></div>
     <div id="stepbar" style="margin-top:14px;display:none">
