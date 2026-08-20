@@ -1278,19 +1278,28 @@
       try {
         const D = await roundData(room);
         if (!D.ranked || !D.ranked.length){ busy = false; return; }
-        // per druzyna: baza (score - w2), historia. Nazwa jak na kartach = entry.title (nie tylko re-detect).
+        // per druzyna: akt STORY FOUND TYLKO za prawdziwa narracje (W2 > 0).
+        // MIXED i archetypy (coreKind=arch) — NIE dostaja bonusu/aktu na tabeli.
         const teams = D.ranked.map(function(r){
           const sb = (typeof window.flStoryBonus === "function") ? window.flStoryBonus(xiNamesFromEntry(r.entry)) : { story:0, name:null, emoji:null };
-          const st = story(r.entry);   // ten sam parser co runCard — dziala u Ciebie na boisku
+          const st = story(r.entry);
           const titleName = st && st.name ? String(st.name).trim() : "";
           const isMixed = !titleName || /^mixed$/i.test(titleName);
-          // punkty w2 z silnika; etykieta: najpierw title z locka (pewnik), potem flStoryBonus
+          const isArch  = !!(st && String(st.coreKind || "").toLowerCase() === "arch");
+          // W2 z silnika = jedyny warunek "trafil narracje"
           let storyPts = sb.story || 0;
-          let storyName = (!isMixed ? titleName : null) || sb.name || null;
-          let emoji = (st && st.emoji) || sb.emoji || null;
-          // MIXED = brak aktu "STORY FOUND" (nawet jesli w2>0 z detektu)
-          if (isMixed && !sb.name){ storyPts = 0; storyName = null; emoji = null; }
-          if (isMixed && sb.name){ storyName = sb.name; emoji = sb.emoji || emoji; } // detect znalazl cos mimo title MIXED
+          let storyName = null;
+          let emoji = null;
+          if (storyPts > 0){
+            // etykieta z silnika; fallback title tylko gdy to nie MIXED/arch
+            storyName = sb.name || (!isMixed && !isArch ? titleName : null) || "STORY";
+            emoji = sb.emoji || (st && st.emoji) || null;
+          } else {
+            // brak W2 → zero aktu (MIXED / arch / nic)
+            storyPts = 0;
+            storyName = null;
+            emoji = null;
+          }
           return { name: r.name, base: r.score - storyPts, story: storyPts, storyName: storyName, emoji: emoji, cur: r.score - storyPts };
         });
         function rankByCur(){ return teams.slice().sort(function(a,b){ return (b.cur - a.cur) || (b.base - a.base); }); }
