@@ -1278,21 +1278,19 @@
       try {
         const D = await roundData(room);
         if (!D.ranked || !D.ranked.length){ busy = false; return; }
-        // per druzyna: akt STORY FOUND tylko gdy lock zapisal coreKind:"narr" (xadStoryFor).
-        // MIXED (coreKind mixed) i archetypy (arch) — bez aktu na tabeli.
-        // Nazwa z entry.title (pewnik jak na kartach); punkty W2 z flStoryBonus gdy silnik je policzy.
+        // per druzyna: akt STORY FOUND TYLKO gdy telefon zapisal PRAWDZIWA narracje przy locku
+        // (title.coreKind === "narr"). arch / mixed -> BEZ aktu. Nazwa z title (nie z re-detectu TV,
+        // ktory czasem nie trafial i ucinal widok).
         const teams = D.ranked.map(function(r){
           const sb = (typeof window.flStoryBonus === "function") ? window.flStoryBonus(xiNamesFromEntry(r.entry)) : { story:0, name:null, emoji:null };
           const st = story(r.entry);
-          const kind = st && st.coreKind ? String(st.coreKind).toLowerCase() : "";
-          const isNarr = kind === "narr";
-          let storyPts = 0;
-          let storyName = null;
-          let emoji = null;
+          const coreKind = st && st.coreKind ? String(st.coreKind).toLowerCase() : "";
+          const isNarr = (coreKind === "narr");
+          let storyPts = 0, storyName = null, emoji = null;
           if (isNarr){
-            storyName = (st && st.name) ? String(st.name).trim() : (sb.name || "STORY");
+            storyName = (st && st.name ? String(st.name).trim() : "") || sb.name || "STORY";
             emoji = (st && st.emoji) || sb.emoji || null;
-            storyPts = sb.story || 0;   // moze byc 0 jesli re-detect na TV nie trafil — nazwa i tak widoczna
+            storyPts = sb.story || 0;   // wartosc W2 do bazy/reorderu (gdy re-detect trafi); akt i tak sie pokaze
           }
           return { name: r.name, base: r.score - storyPts, story: storyPts, storyName: storyName, emoji: emoji, cur: r.score - storyPts };
         });
@@ -1382,7 +1380,7 @@
       if (mode === tag) return;                 // juz leci -> nie odpalaj drugi raz (guard re-entry z pollingu)
       mode = tag;                               // ustawione synchronicznie, zanim funkcja odda sterowanie
       try {
-        await runLoading();                                     // 0) pasek "COMPILING THE STORIES" przed tabela
+        await runLoading();                                    // 0) pasek "COMPILING THE STORIES" przed tabela
         if (mode !== tag) return;
         await runBaseTable(room);                               // 1) BASE TABLE (ranking po BAZIE = score - historia, przed kartami)
         if (mode !== tag) return;                               // przerwane (np. host skoczyl do tabeli)
