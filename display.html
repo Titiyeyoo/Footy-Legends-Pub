@@ -1278,11 +1278,20 @@
       try {
         const D = await roundData(room);
         if (!D.ranked || !D.ranked.length){ busy = false; return; }
-        // per druzyna: baza (score - historia), historia (w2), nazwa/emoji historii
+        // per druzyna: baza (score - w2), historia. Nazwa jak na kartach = entry.title (nie tylko re-detect).
         const teams = D.ranked.map(function(r){
           const sb = (typeof window.flStoryBonus === "function") ? window.flStoryBonus(xiNamesFromEntry(r.entry)) : { story:0, name:null, emoji:null };
-          const story = sb.story || 0;
-          return { name: r.name, base: r.score - story, story: story, storyName: sb.name, emoji: sb.emoji, cur: r.score - story };
+          const st = story(r.entry);   // ten sam parser co runCard — dziala u Ciebie na boisku
+          const titleName = st && st.name ? String(st.name).trim() : "";
+          const isMixed = !titleName || /^mixed$/i.test(titleName);
+          // punkty w2 z silnika; etykieta: najpierw title z locka (pewnik), potem flStoryBonus
+          let storyPts = sb.story || 0;
+          let storyName = (!isMixed ? titleName : null) || sb.name || null;
+          let emoji = (st && st.emoji) || sb.emoji || null;
+          // MIXED = brak aktu "STORY FOUND" (nawet jesli w2>0 z detektu)
+          if (isMixed && !sb.name){ storyPts = 0; storyName = null; emoji = null; }
+          if (isMixed && sb.name){ storyName = sb.name; emoji = sb.emoji || emoji; } // detect znalazl cos mimo title MIXED
+          return { name: r.name, base: r.score - storyPts, story: storyPts, storyName: storyName, emoji: emoji, cur: r.score - storyPts };
         });
         function rankByCur(){ return teams.slice().sort(function(a,b){ return (b.cur - a.cur) || (b.base - a.base); }); }
 
@@ -1319,7 +1328,8 @@
         await sleep(1400);
 
         // 2) Most: jasny komunikat ze zaraz wjadaa bonusy (albo ich brak)
-        const withStory = teams.filter(function(t){ return t.story > 0; });
+        // Pokazuj akt stories gdy JEST NAZWA (z title jak na kartach) — nie tylko gdy w2>0 z re-detectu
+        const withStory = teams.filter(function(t){ return !!t.storyName; });
         if (!withStory.length){
           el("tv-sub").textContent = "NO STORIES FOUND \u00b7 TABLE STANDS";
           await sleep(1800);
@@ -1327,7 +1337,6 @@
           el("tv-sub").textContent = "STORIES FOUND \u00b7 ADDING BONUSES\u2026";
           await sleep(1600);
 
-          // Kolejnosc: najpierw te co RUSZAJA tabele (delta), potem reszta — ale KAZDA z nazwa historii
           const basePos = {}; rankByCur().forEach(function(t,i){ basePos[t.name] = i; });
           const finalPos = {}; teams.slice().sort(function(a,b){ return ((b.base+b.story)-(a.base+a.story)) || (b.base-a.base); }).forEach(function(t,i){ finalPos[t.name] = i; });
           const dlt = function(t){ return Math.abs(basePos[t.name] - finalPos[t.name]); };
@@ -1339,15 +1348,14 @@
             el("tv-sub").innerHTML = "&#9733; STORY FOUND \u00b7 " + safe(label) + " \u00b7 " + safe(t.name);
             t._el.style.boxShadow = "0 0 0 2px #e9c46a, 0 0 22px rgba(233,196,106,.6)";
             t._el.style.background = "rgba(233,196,106,.16)";
-            // badge na wierszu — zostaje, zeby sala pamietala kto co znalazl
             if (t._storyEl){
               t._storyEl.style.display = "block";
               t._storyEl.innerHTML = "&#9733; " + safe(t.storyName || "STORY");
             }
             await sleep(2000);
-            t.cur = t.base + t.story;
+            t.cur = t.base + (t.story || 0);
             placeAll();
-            await sleep(dlt(t) > 0 ? 1600 : 900);   // dluzej gdy tabela sie rusza
+            await sleep(dlt(t) > 0 ? 1600 : 900);
             t._el.style.boxShadow = "";
             t._el.style.background = "rgba(15,23,16,.85)";
             await sleep(250);
