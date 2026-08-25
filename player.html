@@ -305,17 +305,24 @@
       const msg  = document.getElementById("ready-msg");
       btn.disabled = true; btn.textContent = "\u2026";
       try {
-        await sb.from("teams").update({ ready_round: curRoundNum }).eq("id", TEAM_ID);
-        // WERYFIKACJA odczytem (RLS moze CICHO odrzucic — jak przy resecie): UI nie udaje sukcesu
-        const { data: chk } = await sb.from("teams").select("ready_round").eq("id", TEAM_ID).maybeSingle();
-        if (chk && chk.ready_round === curRoundNum){
+        // POTWIERDZENIE Z SAMEGO ZAPISU: .select() zwraca zaktualizowany wiersz w odpowiedzi na UPDATE.
+        // Osobny odczyt bywa podawany z CACHE przegladarki (Brave) i pokazywal falszywy blad.
+        const { data: upd, error: uErr } = await sb.from("teams")
+          .update({ ready_round: curRoundNum }).eq("id", TEAM_ID).select("ready_round");
+        let ok = !uErr && Array.isArray(upd) && upd.length > 0 && upd[0].ready_round === curRoundNum;
+        if (!ok && !uErr){
+          // zapas: odczyt kontrolny (gdy API nie zwrocilo wiersza)
+          const { data: chk } = await sb.from("teams").select("ready_round").eq("id", TEAM_ID).maybeSingle();
+          ok = !!(chk && chk.ready_round === curRoundNum);
+        }
+        if (ok){
           readyDone = true;
           btn.style.display = "none";
           if (done) done.style.display = "";
         } else {
           btn.disabled = false; btn.textContent = "READY";
-          if (msg){ msg.style.display = ""; msg.textContent = "Couldn't save — try again"; }
-          console.error("READY nie zapisany. Sprawdz: kolumna teams.ready_round + polityka UPDATE na teams.");
+          if (msg){ msg.style.display = ""; msg.textContent = uErr ? ("Save blocked: " + uErr.message) : "Couldn't save — try again"; }
+          console.error("READY nie zapisany.", uErr || "update objal 0 wierszy (RLS albo brak wiersza druzyny)", "TEAM_ID=", TEAM_ID, "round=", curRoundNum);
         }
       } catch(e){
         btn.disabled = false; btn.textContent = "READY";
