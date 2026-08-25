@@ -204,6 +204,22 @@
     // Jesli NIE zdazyl (byl jeszcze w drafcie) -> zabierz go z draftu na ekran revealu.
     if (r.status === "reveal" || r.status === "table"){
       playing = false;
+      // ODSWIEZENIE STRONY w trakcie revealu/tabeli gubi flage "locked" (zyje tylko w pamieci).
+      // Odtworz ja z bazy, inaczej telefon pokaze ekran revealu i NIGDY nie da przycisku READY.
+      if (!locked && TEAM_ID){
+        try {
+          if (!roundId || curRoundNum !== r.current_round){
+            const { data: rd0 } = await sb.from("rounds").select("id")
+              .eq("room_id", r.id).eq("round_number", r.current_round).maybeSingle();
+            if (rd0){ roundId = rd0.id; curRoundNum = r.current_round; }
+          }
+          if (roundId){
+            const { data: mine0 } = await sb.from("entries").select("team_id")
+              .eq("round_id", roundId).eq("team_id", TEAM_ID).maybeSingle();
+            if (mine0) showLocked();          // ustawia locked=true + ekran "XI LOCKED"
+          }
+        } catch(e){}
+      }
       if (!locked){
         document.getElementById("xad-draft").style.display = "none";
         document.getElementById("fld-waiting").style.display = "none";
