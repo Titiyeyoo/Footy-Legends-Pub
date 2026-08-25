@@ -411,6 +411,8 @@
   <div id="tableview">
     <div class="tv-th"><div class="t1">LIVE TABLE</div><div class="t2" id="tv-sub"></div></div>
     <div id="titlestable"></div>
+    <!-- KROK 1 READY: dyskretny licznik miedzy rundami (bez auto-startu) -->
+    <div id="ready-line" style="display:none;text-align:center;margin-top:26px;color:#8a8576;font-family:var(--px);font-size:11px;letter-spacing:2px"></div>
   </div>
 
   <!-- FINAL -->
@@ -1019,6 +1021,26 @@
       el("count").textContent = "TEAMS \u00b7 " + (data ? data.length : 0);
     }
 
+    // KROK 1 READY: licznik gotowosci miedzy rundami. Y = druzyny ktore ZALOCKOWALY te runde (aktywni),
+    // X = z nich te z ready_round == current_round. Tylko wyswietlanie — zero auto-startu rundy.
+    async function refreshReadyCounter(room){
+      const line = el("ready-line");
+      if (!line) return;
+      try {
+        const { data: round } = await db.from("rounds").select("id")
+          .eq("room_id", roomId).eq("round_number", room.current_round).maybeSingle();
+        if (!round){ line.style.display = "none"; return; }
+        const qY = await db.from("entries").select("*", { count:"exact", head:true }).eq("round_id", round.id);
+        const Y = qY.count || 0;
+        const qX = await db.from("teams").select("*", { count:"exact", head:true })
+          .eq("room_id", roomId).eq("ready_round", room.current_round);
+        const X = qX.count || 0;
+        if (!Y){ line.style.display = "none"; return; }
+        line.style.display = "";
+        line.textContent = "READY FOR NEXT ROUND \u00b7 " + X + " / " + Y;
+      } catch(e){ line.style.display = "none"; }
+    }
+
     // ===== router =====
     async function checkRoom(){
       if (!roomId || busy) return;
@@ -1033,7 +1055,9 @@
       } else if (room.status === "table"){
         const want = "table:" + room.current_round;
         if (mode !== want){ mode = want; runTitlesTable(room); }
+        refreshReadyCounter(room);   // KROK 1 READY: licznik X/Y odswiezany co poll (bez auto-startu)
       } else if (room.status === "playing"){
+        const rl = el("ready-line"); if (rl) rl.style.display = "none";   // poza tabela licznik znika
         const want = "drafting:" + room.current_round;
         if (mode !== want){ mode = want; runDrafting(room); }
         else { refreshDrafting(room); }   // to samo mode -> tylko odswiez ptaszki
