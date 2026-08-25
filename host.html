@@ -416,6 +416,32 @@
       setInterval(loadTeams, 2000);
       setInterval(maybeAutoReveal, 2000);   // AUTO-REVEAL: reveal sam gdy wszyscy grajacy zalockuja / po deadline
       setInterval(syncRoomState, 2000);     // SYNC: stan gry moze zmienic sie BEZ hosta (TV domyka reveal->table)
+      setInterval(maybeAutoNext, 2000);     // KROK 2: wiekszosc gotowych (READY) -> nastepna runda sama
+    }
+
+    // KROK 2 — NASTEPNA RUNDA NA WIEKSZOSC "READY" (decyduja LUDZIE, nie zegar).
+    // Y = druzyny ktore ZALOCKOWALY te runde (aktywni; widzowie i nieobecni sie nie licza)
+    // X = z nich te z ready_round == currentRound
+    // Prog: X >= floor(Y/2)+1  ->  2/2, 3/2, 4/3, 5/3, 6/4
+    // IDEMPOTENTNIE: jedno przejscie na runde (autoNextDoneRound) + flaga w locie (autoNexting).
+    // SKIP hosta dziala jak dotad — natychmiast, bez czekania na kogokolwiek.
+    let autoNexting = false, autoNextDoneRound = 0;
+    async function maybeAutoNext(){
+      if (!roomId || roomStatus !== "table" || autoNexting) return;
+      if (autoNextDoneRound === currentRound) return;      // ta runda juz przepchnieta
+      try {
+        const st = await lockStats();                       // st.locked = Y (zalockowani w tej rundzie)
+        const Y = st.locked;
+        if (Y < 1) return;
+        const { count } = await db.from("teams").select("*", { count:"exact", head:true })
+          .eq("room_id", roomId).eq("ready_round", currentRound);
+        const X = count || 0;
+        if (X < Math.floor(Y / 2) + 1) return;              // jeszcze nie wiekszosc — czekamy na ludzi
+        if (roomStatus !== "table" || autoNextDoneRound === currentRound) return;   // stan mogl sie zmienic
+        autoNexting = true;
+        autoNextDoneRound = currentRound;
+        try { await nextRound(); } finally { autoNexting = false; }
+      } catch(e){ autoNexting = false; }
     }
 
     // Host do tej pory znal stan tylko z WLASNYCH akcji. Odkad TV samo domyka faze (reveal->table),
