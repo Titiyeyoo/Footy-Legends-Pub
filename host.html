@@ -415,6 +415,20 @@
       } catch(e){}
       setInterval(loadTeams, 2000);
       setInterval(maybeAutoReveal, 2000);   // AUTO-REVEAL: reveal sam gdy wszyscy grajacy zalockuja / po deadline
+      setInterval(syncRoomState, 2000);     // SYNC: stan gry moze zmienic sie BEZ hosta (TV domyka reveal->table)
+    }
+
+    // Host do tej pory znal stan tylko z WLASNYCH akcji. Odkad TV samo domyka faze (reveal->table),
+    // host musi czytac stan pokoju, inaczej przycisk pokazuje nieaktualna faze ("SKIP TO TABLE" przy tabeli).
+    // Reuzywa paintButtons 1:1 — przemalowuje tylko gdy status naprawde sie zmienil.
+    async function syncRoomState(){
+      if (!roomId) return;
+      try {
+        const { data: room, error } = await db.from("rooms").select("status,current_round").eq("id", roomId).maybeSingle();
+        if (error || !room) return;
+        if (typeof room.current_round === "number" && room.current_round > 0) currentRound = room.current_round;
+        if (room.status && room.status !== roomStatus) paintButtons(room.status);
+      } catch(e){}
     }
 
     // ustaw przyciski wg stanu pokoju (dziala takze po odswiezeniu)
