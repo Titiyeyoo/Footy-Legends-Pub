@@ -1420,6 +1420,15 @@
         await sleep(REVEAL_GAP_WIN);   // zwyciezca rundy zostaje dluzej przed tabela
         if (mode !== tag) return;
         runTitlesTable(room);                                   // 3) auto-przejscie do tabeli
+        // MOST (set-and-forget): domkniecie fazy, ktora display WLASNIE odegral — nie sterowanie gra.
+        // Zapis WARUNKOWY: przechodzi tylko gdy pokoj wciaz jest w "reveal" -> drugi TV / odswiezenie
+        // nie zrobia nic (pierwszy zapis wygrywa). Dzieki temu READY pojawia sie na telefonach SAM,
+        // bez klikania SKIP TO TABLE przez hosta. SKIP dalej dziala jako natychmiastowy override.
+        mode = "table:" + room.current_round;   // zgodne z routerem -> tabela nie narysuje sie drugi raz
+        try {
+          await db.from("rooms").update({ status: "table" })
+            .eq("id", roomId).eq("status", "reveal");
+        } catch(e){ console.error("auto-table:", e); }
         // mode ZOSTAJE = tag: tabela stoi, router nie odpala revealu drugi raz;
         // wyjscie nastepuje gdy host klika NEXT ROUND (status->playing, nowa runda)
       } catch(err){ rvError("REVEAL AUTO ERROR: " + (err.message||err)); console.error(err); }
