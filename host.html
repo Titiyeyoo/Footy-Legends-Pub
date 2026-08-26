@@ -530,7 +530,9 @@
       try { code = localStorage.getItem("fl_host_room"); } catch(e){}
       if (!code) return;
       const { data } = await db.from("rooms").select("*").eq("code", code).maybeSingle();
-      if (data && data.status !== "ended") enterRoom(data);
+      // Wracamy TAKZE do zakonczonego wieczoru — inaczej po odswiezeniu host traci NEW NIGHT
+      // i musi zakladac NOWY pokoj (nowy kod + QR + link na TV). paintButtons("ended") pokazuje NEW NIGHT.
+      if (data) enterRoom(data);
     }
 
     // logowanie email+haslo
