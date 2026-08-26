@@ -1488,23 +1488,71 @@
             if (sc > bestSc[e.team_id]){ bestSc[e.team_id] = sc; best[e.team_id] = s; }
           }
         });
-        playing.sort(function(a,b){ return tot[b.id] - tot[a.id]; });
+        // ── SUMY BEZ OSTATNIEJ RUNDY = kolejnosc SPRZED tej rundy (do wjazdu i przetasowania) ──
+        const lastRoundId = rs[rs.length - 1].id;
+        const prev = {};
+        playing.forEach(function(t){ prev[t.id] = 0; });
+        (entries||[]).forEach(function(e){
+          if (prev[e.team_id] === undefined) return;
+          if (e.round_id === lastRoundId) return;          // pomijamy runde ktora wlasnie zeszla
+          if (e.score != null) prev[e.team_id] += e.score;
+        });
 
-        let h = '<table class="titles' + (playing.length > 6 ? ' dense' : '') + '">';
-        h += '<tr><th></th><th></th><th class="th-num">STORIES</th><th>BEST STORY</th></tr>';
-        playing.forEach(function(t, i){
+        const finalOrder = playing.slice().sort(function(a,b){ return tot[b.id] - tot[a.id]; });
+        const prevOrder  = playing.slice().sort(function(a,b){ return (prev[b.id] - prev[a.id]) || (tot[b.id] - tot[a.id]); });
+        const firstRound = (rs.length <= 1);
+
+        function rowHTML(t, i){
           const b = best[t.id];
-          h += '<tr>'
+          return '<tr id="ov-' + t.id + '" style="opacity:0;transition:opacity .5s">'
             +  '<td class="tt-pos">' + (i+1) + '</td>'
             +  '<td class="tt-team">' + safe(t.name) + '</td>'
             +  '<td class="tt-num' + (ile[t.id] ? '' : ' none') + '">' + (ile[t.id] || "\u2014") + '</td>'
             +  (b ? '<td class="tt-cell">' + (b.emoji ? safe(b.emoji) + " " : "") + safe(b.name) + '</td>'
                  : '<td class="tt-cell none">&mdash;</td>')
             +  '</tr>';
-        });
-        el("tv-sub").textContent = "AFTER ROUND " + rs.length + " \u00b7 NO POINTS, JUST STORIES";
-        el("titlestable").innerHTML = h + '</table>';
+        }
+        function paint(order, opaque){
+          let h = '<table class="titles' + (order.length > 6 ? ' dense' : '') + '">';
+          h += '<tr><th></th><th></th><th class="th-num">STORIES</th><th>BEST STORY</th></tr>';
+          order.forEach(function(t, i){ h += rowHTML(t, i); });
+          el("titlestable").innerHTML = h + '</table>';
+          if (opaque) order.forEach(function(t){ const r = document.getElementById("ov-" + t.id); if (r) r.style.opacity = "1"; });
+        }
+
+        el("tv-sub").textContent = firstRound
+          ? ("AFTER ROUND " + rs.length + " \u00b7 NO POINTS, JUST STORIES")
+          : ("THE TABLE \u00b7 BEFORE ROUND " + rs.length);
+        paint(prevOrder, false);
         showOnly("tableview");
+
+        // 1) WJAZD od ostatniego miejsca do pierwszego, w kolejnosci SPRZED tej rundy
+        for (let i = prevOrder.length - 1; i >= 0; i--){
+          const r = document.getElementById("ov-" + prevOrder[i].id);
+          if (r) r.style.opacity = "1";
+          await sleep(750);
+        }
+        await sleep(1200);
+
+        // 2) PRZETASOWANIE — tylko jesli kolejnosc naprawde sie zmienila
+        const moved = !firstRound && prevOrder.some(function(t, i){ return finalOrder[i].id !== t.id; });
+        if (moved){
+          el("tv-sub").textContent = "AFTER ROUND " + rs.length + " \u00b7 THE TABLE MOVES";
+          await sleep(1100);
+          paint(finalOrder, true);
+          // podswietl tych, ktorzy AWANSOWALI
+          finalOrder.forEach(function(t, i){
+            const before = prevOrder.findIndex(function(p){ return p.id === t.id; });
+            if (before > i){
+              const r = document.getElementById("ov-" + t.id);
+              if (r){ r.style.background = "rgba(233,196,106,.18)"; setTimeout(function(){ r.style.background = ""; }, 2600); }
+            }
+          });
+          await sleep(1800);
+        } else if (!firstRound){
+          paint(finalOrder, true);
+        }
+        el("tv-sub").textContent = "AFTER ROUND " + rs.length + " \u00b7 NO POINTS, JUST STORIES";
         rvStep("table teams=" + playing.length); rvClear();
       } catch(err){ rvError("TABLE ERROR: " + (err.message||err)); console.error(err); }
       busy = false;
