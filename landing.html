@@ -151,14 +151,13 @@
 <header>
   <div class="wrap bar">
     <div class="mark">XI After Dark</div>
-    <div class="kicker" style="margin:0">Lincolnshire</div>
   </div>
 </header>
 
 <div class="wrap">
 
   <div class="hero">
-    <p class="kicker">A football night for pubs · <b>Lincolnshire</b></p>
+    <p class="kicker">A football night for pubs</p>
     <h1>A live football night<em>that runs itself</em></h1>
     <p class="lede">Your regulars build a football XI on their phones. The big screen reveals the stories hidden in their line-ups. No quizmaster, no question sheets, nothing to download.</p>
     <a class="btn" href="#book">Book a free first night</a>
@@ -243,11 +242,8 @@
       <p class="kicker">The offer</p>
       <h2>First night is on us</h2>
       <p>We'll run one full night in your pub, free. If your room enjoys it, we'll talk about doing it regularly. If it's not for you, no hard feelings and nothing to cancel.</p>
-      <a class="btn" href="mailto:hello@elevenafterdark.com?subject=XI%20After%20Dark%20—%20trial%20night">Email us</a>
-      <div style="margin-top:20px">
-        <div class="under" style="margin:0 0 6px">Or copy the address</div>
-        <div style="font-family:var(--px);font-size:clamp(14px,3.4vw,19px);letter-spacing:.06em;color:var(--gold);user-select:all;word-break:break-all">hello@elevenafterdark.com</div>
-      </div>
+      <button class="btn" id="copybtn" type="button" style="cursor:pointer;font-size:clamp(13px,3.2vw,17px);letter-spacing:.04em;text-transform:none;word-break:break-all">hello@elevenafterdark.com</button>
+      <div class="under" id="copyhint">Tap to copy the address</div>
       <div class="under">Based near Grantham · Lincolnshire &amp; nearby</div>
     </div>
   </section>
@@ -256,11 +252,33 @@
 
 <footer>
   <div class="wrap">
-    Built and run by one person in Lincolnshire.
     <div class="foot-note">Footy Legends was where it started — play the solo version at <a href="https://footylegendsquiz.co.uk">footylegendsquiz.co.uk</a></div>
     <div class="foot-note" style="margin-top:18px;opacity:.55"><a href="host.html">Running a night? Sign in</a></div>
   </div>
 </footer>
+
+<script>
+  // Klik w adres = skopiowanie do schowka (dziala wszedzie, nie wymaga programu pocztowego)
+  (function(){
+    var btn = document.getElementById("copybtn");
+    var hint = document.getElementById("copyhint");
+    if (!btn) return;
+    btn.addEventListener("click", function(){
+      var mail = "hello@elevenafterdark.com";
+      function done(){ hint.textContent = "Copied — paste it into your email"; setTimeout(function(){ hint.textContent = "Tap to copy the address"; }, 3000); }
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(mail).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var t = document.createElement("textarea");
+        t.value = mail; t.style.position = "fixed"; t.style.opacity = "0";
+        document.body.appendChild(t); t.select();
+        try { document.execCommand("copy"); done(); } catch(e){ hint.textContent = mail; }
+        document.body.removeChild(t);
+      }
+    });
+  })();
+</script>
 
 </body>
 </html>
