@@ -80,11 +80,11 @@
   .row { display:flex; gap:48px; align-items:center; flex-wrap:wrap; justify-content:center; }
   .code { font-size:64px; letter-spacing:12px; color:var(--gold); }
   #qr { background:#fff; padding:min(1.6vh,16px); border-radius:10px; line-height:0; }
-  #qr img { display:block; width:min(30vh,240px); height:auto; }
+  #qr img { display:block; width:min(26vh,220px); height:auto; }
   .teams { margin-top:40px; width:100%; max-width:900px; }
   .count { color:var(--green); letter-spacing:3px; font-size:12px; text-align:center; margin-bottom:16px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
-  .team { background:#132013; border:1px solid #2a4; border-radius:10px; padding:18px; font-size:14px; text-align:center; letter-spacing:2px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:1vh; }
+  .team { background:#132013; border:1px solid #2a4; border-radius:10px; padding:1.2vh 12px; font-size:clamp(11px,1.7vh,15px); text-align:center; letter-spacing:2px; }
   .scan { color:var(--dim); font-size:10px; letter-spacing:2px; text-align:center; margin-top:12px; }
   /* napis nad QR/kodem w lobby: odstep POD napisem (margin-top spychal go na sam QR) */
   .row .scan { margin-top:0; margin-bottom:16px; }
@@ -371,21 +371,31 @@
   </div>
 
   <!-- LOBBY -->
-  <div id="lobby" style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100vh;overflow:hidden;padding:2vh 0;box-sizing:border-box">
-    <!-- EKRAN POWITALNY = poczekalnia. MUSI miescic sie na ekranie bez przewijania (nikt nie scrolluje TV).
-         Wszystko skalowane w vh, logo zastepuje napis z nazwa (logo JUZ zawiera "XI AFTER DARK"). -->
-    <img id="lobby-logo" src="xad-logo.png" alt="XI After Dark"
-         style="width:min(24vh,230px);height:auto;flex:0 0 auto;filter:drop-shadow(0 0 26px rgba(233,196,106,.28));animation:xadFloat 5s ease-in-out infinite"
-         onerror="this.style.display='none';var h=document.getElementById('lobby-name');if(h)h.style.display='block'">
-    <h1 id="lobby-name" style="margin:0;display:none">XI AFTER DARK</h1>
-    <div style="color:#cfcfcf;font-size:clamp(11px,1.9vh,17px);letter-spacing:3px;margin:1.4vh 0 2vh;text-align:center">BUILD YOUR XI &#183; THE BEST STORY WINS</div>
-    <div class="row" style="gap:5vw">
-      <div style="text-align:center"><div class="scan">SCAN TO JOIN</div><div id="qr"></div></div>
-      <div style="text-align:center"><div class="scan">ROOM CODE</div><div id="code" class="code" style="font-size:clamp(30px,7vh,64px)">----</div></div>
+  <div id="lobby" style="display:none;flex-direction:column;width:100%;height:100vh;overflow:hidden;padding:2.5vh 3vw;box-sizing:border-box">
+    <!-- EKRAN POWITALNY = poczekalnia. TV jest SZEROKI, wiec uklad POZIOMY:
+         gora = logo w rogu + haslo obok; dol = QR/kod z lewej, DRUZYNY z prawej (maja wlasne miejsce). -->
+    <div style="display:flex;align-items:center;gap:2vw;flex:0 0 auto">
+      <img id="lobby-logo" src="xad-logo.png" alt="XI After Dark"
+           style="width:min(13vh,120px);height:auto;filter:drop-shadow(0 0 20px rgba(233,196,106,.28))"
+           onerror="this.style.display='none';var h=document.getElementById('lobby-name');if(h)h.style.display='block'">
+      <div style="text-align:left">
+        <h1 id="lobby-name" style="margin:0;display:none;font-size:clamp(18px,3.4vh,34px)">XI AFTER DARK</h1>
+        <div style="color:var(--gold);font-size:clamp(13px,2.6vh,26px);letter-spacing:4px">BUILD YOUR XI</div>
+        <div style="color:#cfcfcf;font-size:clamp(10px,1.7vh,15px);letter-spacing:3px;margin-top:.5vh">THE BEST STORY WINS</div>
+      </div>
     </div>
-    <div class="teams" style="margin-top:2.5vh;min-height:0;flex:0 1 auto;overflow:hidden;width:100%;max-width:900px">
-      <div id="count" class="count">TEAMS · 0</div>
-      <div id="grid" class="grid"></div>
+
+    <div style="display:flex;gap:3vw;align-items:center;flex:1 1 auto;min-height:0;margin-top:2vh">
+      <div style="flex:0 0 auto;text-align:center">
+        <div class="scan" style="margin-bottom:1vh">SCAN TO JOIN</div>
+        <div id="qr"></div>
+        <div class="scan" style="margin-top:1.4vh">ROOM CODE</div>
+        <div id="code" class="code" style="font-size:clamp(22px,5vh,46px);letter-spacing:8px">----</div>
+      </div>
+      <div class="teams" style="flex:1 1 auto;min-width:0;height:100%;display:flex;flex-direction:column;margin:0">
+        <div id="count" class="count" style="flex:0 0 auto;margin-bottom:1.2vh">TEAMS &#183; 0</div>
+        <div id="grid" class="grid" style="flex:1 1 auto;min-height:0;overflow:hidden;align-content:start"></div>
+      </div>
     </div>
   </div>
 
