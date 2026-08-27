@@ -13,6 +13,10 @@
   body { margin:0; background:var(--bg); color:var(--text); font-family:var(--px);
          min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:24px; }
   body.mode-tv { padding:0; }
+  /* POCZEKALNIA = ekran powitalny na TV: musi zmiescic sie CO DO PIKSELA.
+     Padding body (24px) + wysokosc 100vh zawsze dawaly pasek przewijania. */
+  body.lobby-fit { padding:0; height:100vh; min-height:0; overflow:hidden; justify-content:center; }
+  body.lobby-fit #lobby { height:100%; }
   /* ── PODIUM NA FINALE (TOP 3 + radary DNA) ── */
   #podium { display:none; width:100%; }
   #podium.on { display:block; }
@@ -75,7 +79,7 @@
   h1 { color:var(--gold); letter-spacing:4px; font-size:20px; margin:0 0 26px; }
   .row { display:flex; gap:48px; align-items:center; flex-wrap:wrap; justify-content:center; }
   .code { font-size:64px; letter-spacing:12px; color:var(--gold); }
-  #qr { background:#fff; padding:16px; border-radius:10px; }
+  #qr { background:#fff; padding:min(1.6vh,16px); border-radius:10px; line-height:0; }
   #qr img { display:block; width:min(30vh,240px); height:auto; }
   .teams { margin-top:40px; width:100%; max-width:900px; }
   .count { color:var(--green); letter-spacing:3px; font-size:12px; text-align:center; margin-bottom:16px; }
@@ -379,7 +383,7 @@
       <div style="text-align:center"><div class="scan">SCAN TO JOIN</div><div id="qr"></div></div>
       <div style="text-align:center"><div class="scan">ROOM CODE</div><div id="code" class="code" style="font-size:clamp(30px,7vh,64px)">----</div></div>
     </div>
-    <div class="teams" style="margin-top:2.5vh;min-height:0;overflow:hidden">
+    <div class="teams" style="margin-top:2.5vh;min-height:0;flex:0 1 auto;overflow:hidden;width:100%;max-width:900px">
       <div id="count" class="count">TEAMS · 0</div>
       <div id="grid" class="grid"></div>
     </div>
@@ -655,6 +659,7 @@
       // roundview/lobby/connect/loading = flex, reszta block. NIGDY "" — CSS ma display:none
       if (n) n.style.display = (id === "lobby" || id === "connect" || id === "roundview" || id === "loading" || id === "breakview") ? "flex" : "block";
       document.body.classList.toggle("mode-tv", id !== "lobby" && id !== "connect");
+      document.body.classList.toggle("lobby-fit", id === "lobby");
       // przycisk CHANGE ROOM widoczny TYLKO na ekranie laczenia (nie w trakcie gry — zeby nikt go nie kliknal przypadkiem i nie odpial TV od pokoju)
       const cr = el("changeroom"); if (cr) cr.style.display = (id === "connect") ? "" : "none";
       // QR w rogu: schowany na ekranie laczenia i w poczekalni (tam jest DUZY QR), widoczny przez reszte wieczoru
