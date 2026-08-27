@@ -416,6 +416,12 @@
   </div>
 
   <!-- FINAL -->
+  <div id="breakview" style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;text-align:center">
+    <div style="font-size:78px;line-height:1">&#127867;&#127866;</div>
+    <div style="font-family:var(--mono,monospace);color:var(--gold,#e9c46a);font-size:44px;letter-spacing:6px;margin-top:18px">HYDRATION BREAK</div>
+    <div style="color:#cfcfcf;font-size:18px;letter-spacing:2px;margin-top:14px">GET A ROUND IN &#183; THE TABLE WILL BE WAITING</div>
+  </div>
+
   <div id="reveal">
     <div class="rv-title" id="rv-title">TONIGHT'S RESULTS</div>
     <div class="rv-sub" id="rv-sub">Round 1</div>
@@ -626,12 +632,12 @@
     }
 
     function showOnly(id){
-      ["connect","loading","lobby","drafting","board","roundview","tableview","reveal"].forEach(function(v){
+      ["connect","loading","lobby","drafting","board","roundview","tableview","reveal","breakview"].forEach(function(v){
         const n = el(v); if (n) n.style.display = "none";
       });
       const n = el(id);
       // roundview/lobby/connect/loading = flex, reszta block. NIGDY "" — CSS ma display:none
-      if (n) n.style.display = (id === "lobby" || id === "connect" || id === "roundview" || id === "loading") ? "flex" : "block";
+      if (n) n.style.display = (id === "lobby" || id === "connect" || id === "roundview" || id === "loading" || id === "breakview") ? "flex" : "block";
       document.body.classList.toggle("mode-tv", id !== "lobby" && id !== "connect");
       // przycisk CHANGE ROOM widoczny TYLKO na ekranie laczenia (nie w trakcie gry — zeby nikt go nie kliknal przypadkiem i nie odpial TV od pokoju)
       const cr = el("changeroom"); if (cr) cr.style.display = (id === "connect") ? "" : "none";
@@ -1052,6 +1058,9 @@
         if (mode !== "finale"){ mode = "finale"; runFinale(room); }
       } else if (room.status === "reveal"){
         runRevealAuto(room);   // ETAP A: display prowadzi caly reveal sam (guard mode===tag w srodku); ignoruje reveal_step
+      } else if (room.status === "break"){
+        // PRZERWA: pelnoekranowy komunikat. Zero licznika — wraca dopiero gdy host kliknie RESUME.
+        if (mode !== "break"){ mode = "break"; showOnly("breakview"); }
       } else if (room.status === "table"){
         const want = "table:" + room.current_round;
         if (mode !== want){ mode = want; runTitlesTable(room); }
