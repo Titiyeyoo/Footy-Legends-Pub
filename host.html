@@ -178,6 +178,13 @@
       }
       if (go && roomStatus === "playing" && !autoRevealing){
         autoRevealing = true;
+        // DIAGNOSTYKA: zapisz DLACZEGO runda ruszyla sama — inaczej po fakcie nie da sie tego ustalic.
+        const why = (st.locked >= st.teams)
+          ? ("all locked (" + st.locked + "/" + st.teams + ")")
+          : ("draft time up \u2014 only " + st.locked + "/" + st.teams + " locked");
+        try { localStorage.setItem("xad_last_autoreveal", new Date().toLocaleTimeString() + " \u00b7 R" + currentRound + " \u00b7 " + why); } catch(e){}
+        const ri0 = document.getElementById("roundinfo");
+        if (ri0){ ri0.style.display = ""; ri0.textContent = "\u2605 REVEAL STARTED \u00b7 " + why.toUpperCase(); }
         try { await doReveal(); } finally { autoRevealing = false; }
       }
     }
