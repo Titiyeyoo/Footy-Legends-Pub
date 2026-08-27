@@ -419,7 +419,6 @@
   <div id="joincorner" style="display:none;position:fixed;top:16px;right:18px;z-index:60;text-align:center;background:rgba(0,0,0,.45);padding:10px 10px 8px;border:1px solid rgba(233,196,106,.35);border-radius:10px">
     <div id="joinqr" style="line-height:0"></div>
     <div style="font-family:var(--mono,monospace);color:var(--gold,#e9c46a);font-size:11px;letter-spacing:2px;margin-top:6px">JOIN IN</div>
-    <div id="joincode" style="font-family:var(--mono,monospace);color:#fff;font-size:13px;letter-spacing:3px;margin-top:2px"></div>
   </div>
 
   <div id="breakview" style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;text-align:center">
@@ -1018,7 +1017,6 @@
           img2.src = q2.createDataURL(4, 6);
           jc.appendChild(img2);
         }
-        const jcode = el("joincode"); if (jcode) jcode.textContent = code;
       } catch(e){ console.error("corner QR:", e); }
       showOnly("lobby");
       loadTeams(); checkRoom();
@@ -1605,16 +1603,42 @@
         if (moved){
           el("tv-sub").textContent = "AFTER ROUND " + rs.length + " \u00b7 THE TABLE MOVES";
           await sleep(1100);
+          // FLIP: zapamietaj GDZIE wiersze byly, przerysuj, potem przesun je z powrotem
+          // i pusc do nowych miejsc — dzieki temu druzyny MIJAJA SIE plynnie, a nie przeskakuja.
+          const before = {};
+          prevOrder.forEach(function(t){
+            const r = document.getElementById("ov-" + t.id);
+            if (r) before[t.id] = r.getBoundingClientRect().top;
+          });
           paint(finalOrder, true);
+          const rows = [];
+          finalOrder.forEach(function(t){
+            const r = document.getElementById("ov-" + t.id);
+            if (!r || before[t.id] === undefined) return;
+            const delta = before[t.id] - r.getBoundingClientRect().top;
+            if (!delta) return;
+            r.style.transition = "none";
+            r.style.transform = "translateY(" + delta + "px)";
+            r.style.position = "relative";
+            r.style.zIndex = (delta > 0) ? "3" : "2";   // wchodzacy w gore PRZED tym, ktory spada
+            rows.push(r);
+          });
+          if (rows.length){
+            await sleep(60);                              // pozwol przegladarce zapamietac pozycje startowa
+            rows.forEach(function(r){
+              r.style.transition = "transform 1.6s cubic-bezier(.5,.05,.2,1), background .6s";
+              r.style.transform = "translateY(0)";
+            });
+          }
           // podswietl tych, ktorzy AWANSOWALI
           finalOrder.forEach(function(t, i){
-            const before = prevOrder.findIndex(function(p){ return p.id === t.id; });
-            if (before > i){
+            const wasAt = prevOrder.findIndex(function(p){ return p.id === t.id; });
+            if (wasAt > i){
               const r = document.getElementById("ov-" + t.id);
-              if (r){ r.style.background = "rgba(233,196,106,.18)"; setTimeout(function(){ r.style.background = ""; }, 2600); }
+              if (r){ r.style.background = "rgba(233,196,106,.18)"; setTimeout(function(){ r.style.background = ""; }, 3200); }
             }
           });
-          await sleep(1800);
+          await sleep(2600);
         } else if (!firstRound){
           paint(finalOrder, true);
         }
