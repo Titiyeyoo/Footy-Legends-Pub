@@ -76,7 +76,7 @@
   .row { display:flex; gap:48px; align-items:center; flex-wrap:wrap; justify-content:center; }
   .code { font-size:64px; letter-spacing:12px; color:var(--gold); }
   #qr { background:#fff; padding:16px; border-radius:10px; }
-  #qr img { display:block; }
+  #qr img { display:block; width:min(30vh,240px); height:auto; }
   .teams { margin-top:40px; width:100%; max-width:900px; }
   .count { color:var(--green); letter-spacing:3px; font-size:12px; text-align:center; margin-bottom:16px; }
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
@@ -367,18 +367,19 @@
   </div>
 
   <!-- LOBBY -->
-  <div id="lobby" style="display:none;flex-direction:column;align-items:center;width:100%">
-    <!-- EKRAN POWITALNY = poczekalnia. Wisi na TV, gdy pub sie zapelnia: logo, jedno zdanie, QR, druzyny. -->
+  <div id="lobby" style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100vh;overflow:hidden;padding:2vh 0;box-sizing:border-box">
+    <!-- EKRAN POWITALNY = poczekalnia. MUSI miescic sie na ekranie bez przewijania (nikt nie scrolluje TV).
+         Wszystko skalowane w vh, logo zastepuje napis z nazwa (logo JUZ zawiera "XI AFTER DARK"). -->
     <img id="lobby-logo" src="xad-logo.png" alt="XI After Dark"
-         style="width:min(30vh,260px);height:auto;margin-bottom:6px;filter:drop-shadow(0 0 26px rgba(233,196,106,.28));animation:xadFloat 5s ease-in-out infinite"
-         onerror="this.style.display='none'">
-    <h1 style="margin:0">XI AFTER DARK</h1>
-    <div style="color:#cfcfcf;font-size:17px;letter-spacing:3px;margin:10px 0 18px;text-align:center">BUILD YOUR XI &#183; THE BEST STORY WINS</div>
-    <div class="row">
+         style="width:min(24vh,230px);height:auto;flex:0 0 auto;filter:drop-shadow(0 0 26px rgba(233,196,106,.28));animation:xadFloat 5s ease-in-out infinite"
+         onerror="this.style.display='none';var h=document.getElementById('lobby-name');if(h)h.style.display='block'">
+    <h1 id="lobby-name" style="margin:0;display:none">XI AFTER DARK</h1>
+    <div style="color:#cfcfcf;font-size:clamp(11px,1.9vh,17px);letter-spacing:3px;margin:1.4vh 0 2vh;text-align:center">BUILD YOUR XI &#183; THE BEST STORY WINS</div>
+    <div class="row" style="gap:5vw">
       <div style="text-align:center"><div class="scan">SCAN TO JOIN</div><div id="qr"></div></div>
-      <div style="text-align:center"><div class="scan">ROOM CODE</div><div id="code" class="code">----</div></div>
+      <div style="text-align:center"><div class="scan">ROOM CODE</div><div id="code" class="code" style="font-size:clamp(30px,7vh,64px)">----</div></div>
     </div>
-    <div class="teams">
+    <div class="teams" style="margin-top:2.5vh;min-height:0;overflow:hidden">
       <div id="count" class="count">TEAMS · 0</div>
       <div id="grid" class="grid"></div>
     </div>
