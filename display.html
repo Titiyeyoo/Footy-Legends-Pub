@@ -1347,7 +1347,8 @@
           if (isNarr){
             storyName = (st && st.name ? String(st.name).trim() : "") || sb.name || "STORY";
             emoji = (st && st.emoji) || sb.emoji || null;
-            storyPts = sb.story || 0;   // wartosc W2 do bazy/reorderu (gdy re-detect trafi); akt i tak sie pokaze
+            // NAJPIERW liczba zapisana przez TELEFON (pewna), dopiero potem wlasny re-detect (bywa 0).
+            storyPts = (typeof st.w2 === "number") ? st.w2 : (sb.story || 0);
           }
           return { name: r.name, base: r.score - storyPts, story: storyPts, storyName: storyName, emoji: emoji, cur: r.score - storyPts };
         });
