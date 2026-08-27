@@ -74,7 +74,7 @@
   </div>
 
   <!-- ekran po LOCK IN (pub): draft znika, czekamy na reveal na TV -->
-  <div id="fld-break" style="display:none;text-align:center;padding:70px 20px">
+  <div id="fld-break" style="display:none;text-align:center;padding:70px 20px;opacity:0;transition:opacity .7s">
     <div style="font-size:54px;line-height:1">&#127867;&#127866;</div>
     <div style="font-family:var(--mono,monospace);color:var(--gold,#e9c46a);font-size:22px;letter-spacing:3px;margin-top:16px">HYDRATION BREAK</div>
     <div style="color:#bdbdbd;font-size:14px;margin-top:12px">Grab a drink. The next round starts when the break ends.</div>
@@ -214,12 +214,20 @@
       ["xad-draft","fld-waiting","fld-locked","fld-reveal"].forEach(function(id){
         const n = document.getElementById(id); if (n) n.style.display = "none";
       });
-      document.getElementById("fld-break").style.display = "";
+      const bk = document.getElementById("fld-break");
+      bk.style.display = "";
+      requestAnimationFrame(function(){ bk.style.opacity = "1"; });   // plynne wejscie zamiast przeskoku
       try { window.scrollTo(0,0); } catch(e){}
+      wasBreak = true;
       return;
     }
     const brk = document.getElementById("fld-break");
-    if (brk) brk.style.display = "none";
+    if (brk){ brk.style.display = "none"; brk.style.opacity = "0"; }
+    if (wasBreak){
+      // POWROT Z PRZERWY: skasuj znacznik "ten ekran juz narysowany", zeby router
+      // przerysowal wszystko od zera (pierwszy powrot potrafil zostawic pusty ekran).
+      wasBreak = false;
+    }
 
     if (r.status === "reveal" || r.status === "table"){
       playing = false;
@@ -307,6 +315,8 @@
     if (done) done.style.display = "none";
     if (msg){ msg.style.display = "none"; msg.textContent = ""; }
   }
+  let wasBreak = false;   // czy telefon wlasnie wraca z przerwy
+
   function showReady(){                    // wolane tylko przy status="table" i locked===true
     // Kontener "XI LOCKED" MUSI byc widoczny — ekran przerwy go chowa, a READY siedzi w srodku.
     // Bez tego po RESUME telefon zostawal czarny az do odswiezenia.
