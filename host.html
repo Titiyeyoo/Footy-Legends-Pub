@@ -55,6 +55,9 @@
       <button id="opentv" style="flex:1;background:#132013;color:var(--gold);border:1px solid var(--gold);padding:14px;font-family:inherit;font-size:14px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128250; OPEN TV</button>
       <button id="copytv" style="flex:1;background:#132013;color:#39d353;border:1px solid #2a4;padding:14px;font-family:inherit;font-size:14px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128279; COPY TV LINK</button>
     </div>
+    <div style="margin-top:10px">
+      <button id="copyjoin" style="width:100%;background:#132013;color:var(--gold);border:1px solid var(--gold);padding:14px;font-family:inherit;font-size:14px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128241; COPY PLAYER LINK</button>
+    </div>
     <div class="teams">
       <div id="count" class="count">TEAMS · 0</div>
       <div id="teamlist"></div>
@@ -432,6 +435,13 @@
 
       // link do TV z aktualnym kodem — OPEN TV otwiera, COPY TV LINK kopiuje
       const tvLink = baseUrl() + "/display.html?room=" + room.code;
+      // LINK DLA GRACZY — do wyslania komus, kto nie moze zeskanowac QR (zawiera juz kod pokoju).
+      document.getElementById("copyjoin").onclick = async function(){
+        const btn = document.getElementById("copyjoin");
+        try { await navigator.clipboard.writeText(link); btn.innerHTML = "&#10003; COPIED"; }
+        catch(e){ prompt("Copy the player link:", link); return; }
+        setTimeout(function(){ btn.innerHTML = "&#128241; COPY PLAYER LINK"; }, 1500);
+      };
       document.getElementById("opentv").onclick = function(){ window.open(tvLink, "_blank"); };
       document.getElementById("copytv").onclick = async function(){
         const btn = document.getElementById("copytv");
