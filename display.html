@@ -15,8 +15,35 @@
   body.mode-tv { padding:0; }
   /* POCZEKALNIA = ekran powitalny na TV: musi zmiescic sie CO DO PIKSELA.
      Padding body (24px) + wysokosc 100vh zawsze dawaly pasek przewijania. */
-  body.lobby-fit { padding:0; height:100vh; min-height:0; overflow:hidden; justify-content:center; }
-  body.lobby-fit #lobby { height:100%; }
+/* ===== EKRAN POWITALNY (lobby) ===== */
+  #lobby { display:none; flex-direction:column; width:100%; height:100vh; overflow:hidden;
+           padding:2.2vh 3vw; box-sizing:border-box; }
+  body.lobby-fit { padding:0; height:100vh; min-height:0; overflow:hidden; justify-content:flex-start; }
+  .lb-top { display:flex; align-items:center; gap:14px; flex:0 0 auto; }
+  #lobby-logo { width:min(7vh,64px); height:auto; }
+  .lb-name { display:none; color:var(--gold); font-size:clamp(14px,2.4vh,22px); letter-spacing:3px; }
+  .lb-tag { color:var(--dim); font-size:clamp(9px,1.4vh,13px); letter-spacing:3px; }
+  .lb-count { margin-left:auto; color:var(--green); font-size:clamp(10px,1.6vh,15px); letter-spacing:3px; }
+  .lb-mid { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; margin:1.5vh 0 2vh; }
+  .lb-join { color:#cfcfcf; font-size:clamp(11px,2vh,19px); letter-spacing:4px; margin-bottom:1vh; }
+  .lb-codewrap { display:flex; align-items:center; gap:3vw; }
+  .lb-code { color:var(--gold); font-size:clamp(46px,15vh,150px); letter-spacing:.12em; line-height:1; }
+  .lb-qrbox { text-align:center; }
+  .lb-orscan { color:var(--dim); font-size:clamp(8px,1.2vh,12px); letter-spacing:3px; margin-top:.6vh; }
+  #qr { background:#fff; padding:min(1.2vh,12px); border-radius:8px; line-height:0; display:inline-block; }
+  #qr img { display:block; width:min(14vh,130px); height:auto; }
+  .lb-bottom { flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
+               align-items:center; justify-content:flex-start; overflow:hidden; }
+  /* STALY rozmiar kafelka — rosnie LICZBA RZEDOW, nie maleja karty */
+  .lb-grid { display:flex; flex-wrap:wrap; gap:1.1vh 1vw; justify-content:center; align-content:flex-start; width:100%; }
+  .lb-grid .team { flex:0 0 auto; width:clamp(120px,15vw,190px); background:#132013;
+                   border:1px solid #2a4a2a; border-radius:8px; padding:1.1vh 10px;
+                   color:var(--gold); font-size:clamp(11px,1.8vh,16px); letter-spacing:1px;
+                   text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* 13+ druzyn: wezsze karty, wciaz czytelne (zamiast kurczenia wszystkiego po kolei) */
+  .lb-grid.tight .team { width:clamp(96px,11vw,150px); font-size:clamp(10px,1.5vh,13px); padding:.7vh 8px; }
+  .lb-waiting { color:#4e7a4e; font-size:clamp(11px,1.8vh,16px); letter-spacing:3px; animation:xadPulse 2.4s ease-in-out infinite; }
+  @keyframes xadPulse { 0%,100%{ opacity:.45 } 50%{ opacity:1 } }
   /* ── PODIUM NA FINALE (TOP 3 + radary DNA) ── */
   #podium { display:none; width:100%; }
   #podium.on { display:block; }
@@ -371,31 +398,31 @@
   </div>
 
   <!-- LOBBY -->
-  <div id="lobby" style="display:none;flex-direction:column;width:100%;height:100vh;overflow:hidden;padding:2.5vh 3vw;box-sizing:border-box">
-    <!-- EKRAN POWITALNY = poczekalnia. TV jest SZEROKI, wiec uklad POZIOMY:
-         gora = logo w rogu + haslo obok; dol = QR/kod z lewej, DRUZYNY z prawej (maja wlasne miejsce). -->
-    <div style="display:flex;align-items:center;gap:2vw;flex:0 0 auto">
+  <div id="lobby">
+    <!-- EKRAN POWITALNY. Hierarchia: JOIN -> KOD (bohater) -> QR (pomocnik) -> DRUZYNY.
+         Kafelki druzyn maja STALY rozmiar; przy wiekszej liczbie przybywa RZEDOW, nie kurcza sie. -->
+    <div class="lb-top">
       <img id="lobby-logo" src="xad-logo.png" alt="XI After Dark"
-           style="width:min(13vh,120px);height:auto;filter:drop-shadow(0 0 20px rgba(233,196,106,.28))"
            onerror="this.style.display='none';var h=document.getElementById('lobby-name');if(h)h.style.display='block'">
-      <div style="text-align:left">
-        <h1 id="lobby-name" style="margin:0;display:none;font-size:clamp(18px,3.4vh,34px)">XI AFTER DARK</h1>
-        <div style="color:var(--gold);font-size:clamp(13px,2.6vh,26px);letter-spacing:4px">BUILD YOUR XI</div>
-        <div style="color:#cfcfcf;font-size:clamp(10px,1.7vh,15px);letter-spacing:3px;margin-top:.5vh">THE BEST STORY WINS</div>
+      <span id="lobby-name" class="lb-name">XI AFTER DARK</span>
+      <span class="lb-tag">BUILD YOUR XI &#183; THE BEST STORY WINS</span>
+      <span id="count" class="lb-count"></span>
+    </div>
+
+    <div class="lb-mid">
+      <div class="lb-join">JOIN AT ELEVENAFTERDARK.COM/JOIN</div>
+      <div class="lb-codewrap">
+        <div id="code" class="lb-code">----</div>
+        <div class="lb-qrbox">
+          <div id="qr"></div>
+          <div class="lb-orscan">OR SCAN</div>
+        </div>
       </div>
     </div>
 
-    <div style="display:flex;gap:3vw;align-items:center;flex:1 1 auto;min-height:0;margin-top:2vh">
-      <div style="flex:0 0 auto;text-align:center">
-        <div class="scan" style="margin-bottom:1vh">SCAN TO JOIN</div>
-        <div id="qr"></div>
-        <div class="scan" style="margin-top:1.4vh">ROOM CODE</div>
-        <div id="code" class="code" style="font-size:clamp(22px,5vh,46px);letter-spacing:8px">----</div>
-      </div>
-      <div class="teams" style="flex:1 1 auto;min-width:0;height:100%;display:flex;flex-direction:column;margin:0">
-        <div id="count" class="count" style="flex:0 0 auto;margin-bottom:1.2vh">TEAMS &#183; 0</div>
-        <div id="grid" class="grid" style="flex:1 1 auto;min-height:0;overflow:hidden;align-content:start"></div>
-      </div>
+    <div class="lb-bottom">
+      <div id="grid" class="lb-grid"></div>
+      <div id="lb-waiting" class="lb-waiting">WAITING FOR THE FIRST TEAM&#8230;</div>
     </div>
   </div>
 
@@ -1069,11 +1096,19 @@
     async function loadTeams(){
       if (!roomId || mode !== "lobby") return;
       const { data } = await db.from("teams").select("*").eq("room_id", roomId).order("created_at");
+      const teams = (data || []).filter(function(t){ return t.role !== "spectator"; });
       const grid = el("grid"); grid.innerHTML = "";
-      (data || []).forEach(function(t){
-        const d = document.createElement("div"); d.className = "team"; d.innerHTML = safe(t.name); grid.appendChild(d);
+      teams.forEach(function(t, i){
+        const d = document.createElement("div"); d.className = "team";
+        const nr = (i + 1) < 10 ? ("0" + (i + 1)) : String(i + 1);
+        d.innerHTML = '<span style="color:#4e7a4e;margin-right:8px">' + nr + '</span>' + safe(t.name);
+        grid.appendChild(d);
       });
-      el("count").textContent = "TEAMS \u00b7 " + (data ? data.length : 0);
+      // 13+ druzyn -> wezsze kafelki. Do 12 karty trzymaja PELNY rozmiar (przybywa rzedow).
+      grid.classList.toggle("tight", teams.length > 12);
+      // pusty ekran nie moze wygladac na zepsuty: zamiast "TEAMS · 0" pulsuje zaproszenie
+      const w = el("lb-waiting"); if (w) w.style.display = teams.length ? "none" : "block";
+      el("count").textContent = teams.length ? ("TEAMS \u00b7 " + teams.length) : "";
     }
 
     // KROK 1 READY: licznik gotowosci miedzy rundami. Y = druzyny ktore ZALOCKOWALY te runde (aktywni),
