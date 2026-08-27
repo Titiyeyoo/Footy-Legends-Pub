@@ -153,6 +153,24 @@
       const name = document.getElementById("name").value.trim();
       if (!name){ document.getElementById("err").textContent = "Enter a team name."; return; }
       if (!room){ document.getElementById("err").textContent = "Room not ready yet — try again."; return; }
+      // BLOKADA DUPLIKATU: dwie druzyny o tej samej nazwie sa nie do rozroznienia na TV.
+      // Sprawdzamy BEZ wielkosci liter i bez spacji na koncach ("Reds" == "reds " == "REDS").
+      const btnJoin = document.getElementById("join");
+      const label = btnJoin.textContent;
+      btnJoin.disabled = true; btnJoin.textContent = "CHECKING\u2026";
+      try {
+        const { data: taken, error: cErr } = await db.from("teams").select("name").eq("room_id", room.id);
+        if (!cErr && Array.isArray(taken)){
+          const norm = name.toLowerCase();
+          const clash = taken.some(function(t){ return (t.name||"").trim().toLowerCase() === norm; });
+          if (clash){
+            document.getElementById("err").textContent = "That name is already taken tonight \u2014 pick another one.";
+            btnJoin.disabled = false; btnJoin.textContent = label;
+            return;
+          }
+        }
+      } catch(e){}
+      btnJoin.disabled = false; btnJoin.textContent = label;
       const { data, error } = await db.from("teams").insert({ room_id: room.id, name: name, role: "team" }).select().single();
       if (error){ document.getElementById("err").textContent = error.message; return; }
       localStorage.setItem("fl_team_id", data.id);
