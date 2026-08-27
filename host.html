@@ -66,6 +66,9 @@
       <!-- Hit-area TYLKO na przycisku (nie full-width) — chroni przed przypadkowym tapem na telefonie -->
       <button id="skipbtn" style="display:inline-block;width:auto;min-width:160px;max-width:280px;background:linear-gradient(180deg,#f4d788,#e9c46a);color:#111;border:0;padding:14px 22px;font-family:inherit;font-size:14px;letter-spacing:2px;cursor:pointer;border-radius:8px;box-shadow:0 3px 0 #b8963f">&#9197; SKIP</button>
     </div>
+    <div id="breakbar" style="margin-top:10px;display:none;text-align:center">
+      <button id="breakbtn" style="display:inline-block;width:auto;min-width:160px;max-width:300px;background:#2a1f10;color:var(--gold);border:1px solid var(--gold);padding:12px 20px;font-family:inherit;font-size:13px;letter-spacing:2px;cursor:pointer;border-radius:8px">&#127867; HYDRATION BREAK</button>
+    </div>
     <div id="roundinfo" class="count" style="margin-top:20px;display:none"></div>
     <div id="stepbar" style="margin-top:14px;display:none">
       <button id="stepbtn" style="width:100%;background:linear-gradient(180deg,#f4d788,#e9c46a);color:#111;border:0;padding:34px 16px;font-family:inherit;font-size:22px;letter-spacing:3px;cursor:pointer;border-radius:10px;box-shadow:0 4px 0 #b8963f">&#9654; NEXT REVEAL</button>
@@ -236,6 +239,30 @@
       if (roomStatus === "playing"){ await revealRound(); }        // draft -> reveal (z guardem "nie wszyscy zalockowali")
       else if (roomStatus === "reveal"){ await showTitles(); }     // reveal -> tabela (przeskok)
       else if (roomStatus === "table"){ await nextRound(); }       // tabela -> nastepna runda
+    };
+
+    // ===== HYDRATION BREAK =====
+    // Host moze kliknac KIEDY CHCE. Jesli tabela juz stoi -> przerwa od razu.
+    // Jesli trwa draft/reveal -> przerwa UZBROJONA i wchodzi sama, gdy wjedzie tabela z wynikami.
+    let breakPending = false;
+    async function enterBreak(){
+      if (!roomId) return;
+      const { error } = await db.from("rooms").update({ status: "break" }).eq("id", roomId).eq("status", "table");
+      if (error){ alert("Break error: " + error.message); return; }
+      breakPending = false;
+      paintButtons("break");
+    }
+    document.getElementById("breakbtn").onclick = async function(){
+      if (!roomId) return;
+      if (roomStatus === "break"){                       // RESUME
+        const { error } = await db.from("rooms").update({ status: "table" }).eq("id", roomId);
+        if (error){ alert("Resume error: " + error.message); return; }
+        paintButtons("table");   // gotowi sprzed przerwy nadal licza sie — po powrocie runda moze ruszyc od razu
+        return;
+      }
+      if (roomStatus === "table"){ await enterBreak(); return; }
+      breakPending = !breakPending;                      // uzbrojenie / anulowanie
+      paintButtons(roomStatus);
     };
 
     document.getElementById("revealbtn").onclick = revealRound;
@@ -462,6 +489,8 @@
         if (error || !room) return;
         if (typeof room.current_round === "number" && room.current_round > 0) currentRound = room.current_round;
         if (room.status && room.status !== roomStatus) paintButtons(room.status);
+        // UZBROJONA PRZERWA: tabela wlasnie wjechala -> wchodzimy w przerwe
+        if (breakPending && room.status === "table"){ await enterBreak(); }
       } catch(e){}
     }
 
@@ -484,6 +513,22 @@
       else if (status === "reveal"){ _skbtn.disabled=false; _skbtn.innerHTML="&#9197; SKIP TO TABLE"; _skb.style.display=""; }
       else if (status === "table"){ _skbtn.disabled=false; _skbtn.innerHTML="&#9197; NEXT ROUND"; _skb.style.display=""; }
       else { _skb.style.display="none"; }
+      // pasek przerwy: widoczny w trakcie gry i w samej przerwie
+      const _brb = document.getElementById("breakbar"), _brbtn = document.getElementById("breakbtn");
+      if (_brb && _brbtn){
+        if (status === "break"){
+          _brb.style.display = ""; _brbtn.innerHTML = "\u25B6 RESUME";
+        } else if (status === "playing" || status === "reveal" || status === "table"){
+          _brb.style.display = "";
+          _brbtn.innerHTML = breakPending ? "\u{1F37B} BREAK ARMED \u00b7 TAP TO CANCEL" : "\u{1F37B} HYDRATION BREAK";
+        } else { _brb.style.display = "none"; }
+      }
+      if (status === "break"){
+        ri.style.display = ""; ri.textContent = "\u{1F37B} HYDRATION BREAK \u00b7 ON THE BIG SCREEN";
+        eb.style.display = "";
+        _skb.style.display = "none";
+        return;
+      }
       if (status === "ended"){
         ri.style.display = ""; ri.textContent = "\u{1F3C1} NIGHT ENDED \u00b7 OVERALL TABLE ON THE BIG SCREEN";
         if (nnb) nnb.style.display = "";     // wyjscie ze slepego zaulka — bez odswiezania strony
