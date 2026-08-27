@@ -430,7 +430,16 @@
       const xi = (state && state.slots ? state.slots : []).filter(function(p){ return p; });
       if (xi.length === 11){
         const st = window.xadStoryFor(xi);
-        if (st) title = JSON.stringify(st);
+        if (st){
+          // ZAPISZ TEZ WARTOSC BONUSU (w2). Telewizor liczyl ja sobie SAM od nowa i czesto
+          // wychodzilo mu 0 — wtedy tabela bazowa byla identyczna z koncowa i doliczanie
+          // historii nic nie zmienialo. Tu nazwiska sa PRAWDZIWE, wiec liczba jest pewna.
+          try {
+            const b = window.flStoryBonus(xi.map(function(p){ return p.n; }));
+            if (b && typeof b.story === "number") st.w2 = b.story;
+          } catch(e){}
+          title = JSON.stringify(st);
+        }
       }
     } catch(e){ console.warn("story:", e); }
     // UI od razu (nie kaz graczowi czekac na siec)
