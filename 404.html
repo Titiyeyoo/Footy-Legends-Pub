@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XI After Dark</title>
+<style>
+  body { margin:0; background:#0a0f0a; color:#d8d8d8; font-family:"Courier New",monospace;
+         min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+         padding:24px; text-align:center; }
+  h1 { color:#e9c46a; letter-spacing:3px; font-size:20px; margin:0 0 10px; }
+  p { color:#8a8576; font-size:13px; line-height:1.7; margin:0 0 22px; }
+  a { display:inline-block; background:#e9c46a; color:#111; text-decoration:none;
+      padding:16px 26px; letter-spacing:2px; font-size:15px; border-radius:8px; }
+</style>
+</head>
+<body>
+  <h1>XI AFTER DARK</h1>
+  <p id="msg">Taking you to the game&#8230;</p>
+  <a href="/join.html" id="fallback">JOIN A GAME</a>
+
+  <script>
+    // GitHub Pages ROZROZNIA WIELKOSC LITER w adresach: /JOIN to nie to samo co /join.
+    // Na TV adres swieci WIELKIMI literami, wiec ludzie beda tak wpisywac — i trafialiby na 404.
+    // Ta strona lapie KAZDY zly adres i kieruje tam, gdzie gosc chcial trafic.
+    (function(){
+      var path = (location.pathname || "").toLowerCase().replace(/^\/+|\/+$/g, "");
+      var qs   = location.search || "";
+      var map  = {
+        "join": "/join.html", "join.html": "/join.html",
+        "host": "/host.html", "host.html": "/host.html",
+        "display": "/display.html", "display.html": "/display.html",
+        "play": "/play.html", "play.html": "/play.html",
+        "tv": "/display.html", "game": "/join.html", "player": "/join.html"
+      };
+      var target = map[path];
+      if (target){ location.replace(target + qs + (location.hash || "")); return; }
+      // nieznany adres — pokaz zaproszenie zamiast bledu serwera
+      document.getElementById("msg").textContent =
+        "That page doesn't exist. If you're here to play, join the game below.";
+    })();
+  </script>
+</body>
+</html>
