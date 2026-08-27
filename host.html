@@ -301,7 +301,8 @@
       btn.disabled = true; btn.textContent = "ENDING…";
       const { error } = await db.from("rooms").update({ status: "ended" }).eq("id", roomId);
       if (error){ alert("End error: " + error.message); btn.disabled=false; btn.innerHTML="&#127937; END TONIGHT"; return; }
-      try { localStorage.removeItem("fl_host_room"); } catch(e){}
+      // NIE kasujemy fl_host_room — inaczej po odswiezeniu host nie ma DO CZEGO wrocic
+      // i traci NEW NIGHT (musialby zalozyc nowy pokoj = nowy kod, QR i link na TV).
       paintButtons("ended");
     }
 
