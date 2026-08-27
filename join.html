@@ -23,6 +23,14 @@
   <h1>XI AFTER DARK · JOIN</h1>
   <div class="sub" id="roomline"></div>
 
+  <div id="codestep" style="display:none">
+    <input id="codein" placeholder="CODE" maxlength="4" autocomplete="off" autocapitalize="characters"
+           inputmode="text" style="text-align:center;letter-spacing:10px;font-size:34px;color:var(--gold);padding:20px">
+    <div class="sub" style="margin:8px 0 14px;font-size:11px">4 characters &middot; it's on the big screen</div>
+    <button id="codego">CONTINUE</button>
+    <div class="sub err" id="codeerr"></div>
+  </div>
+
   <div id="form">
     <input id="name" placeholder="Team name…" maxlength="14" autocomplete="off">
     <div class="sub" id="namehint" style="margin:8px 0 14px;font-size:11px">up to 14 characters &middot; it goes on the big screen</div>
@@ -57,7 +65,40 @@
     let room = null;
 
     document.getElementById("roomline").innerHTML =
-      code ? ('ROOM <span class="code">' + safe(code) + '</span>') : "No room code in the link.";
+      code ? ('ROOM <span class="code">' + safe(code) + '</span>') : "Enter the code from the big screen";
+
+    // BEZ KODU W LINKU (ktos wpisal adres recznie, bo nie moze zeskanowac QR):
+    // pokazujemy pole na kod. Wczesniej byl tu SLEPY ZAULEK — komunikat i nic wiecej.
+    if (!code){
+      document.getElementById("form").style.display = "none";
+      document.getElementById("codestep").style.display = "block";
+      const ci = document.getElementById("codein");
+      setTimeout(function(){ try { ci.focus(); } catch(e){} }, 150);
+      ci.addEventListener("input", function(){
+        this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        document.getElementById("codeerr").textContent = "";
+      });
+      ci.addEventListener("keydown", function(e){
+        if (e.key === "Enter") document.getElementById("codego").click();
+      });
+      document.getElementById("codego").onclick = async function(){
+        const v = (ci.value || "").trim().toUpperCase();
+        const errEl = document.getElementById("codeerr");
+        if (v.length < 4){ errEl.textContent = "Enter all 4 characters."; return; }
+        const btn = this, label = btn.textContent;
+        btn.disabled = true; btn.textContent = "CHECKING\u2026";
+        // SPRAWDZAMY OD RAZU — zeby nikt nie wpisywal nazwy druzyny do nieistniejacego pokoju
+        let found = null;
+        try {
+          const res = await db.from("rooms").select("id").eq("code", v).maybeSingle();
+          found = res.data;
+        } catch(e){ found = null; }
+        btn.disabled = false; btn.textContent = label;
+        if (!found){ errEl.textContent = "No game with that code. Check the big screen."; return; }
+        // ten sam adres co po skanie QR — dalej wszystko idzie utarta sciezka
+        location.href = "join.html?room=" + encodeURIComponent(v);
+      };
+    }
 
     // ===== POWROT PRZEZ QR =====
     // Tozsamosc zapisana przy pierwszym JOIN siedzi w localStorage.
