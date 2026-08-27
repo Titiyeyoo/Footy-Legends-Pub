@@ -74,6 +74,12 @@
   </div>
 
   <!-- ekran po LOCK IN (pub): draft znika, czekamy na reveal na TV -->
+  <div id="fld-break" style="display:none;text-align:center;padding:70px 20px">
+    <div style="font-size:54px;line-height:1">&#127867;&#127866;</div>
+    <div style="font-family:var(--mono,monospace);color:var(--gold,#e9c46a);font-size:22px;letter-spacing:3px;margin-top:16px">HYDRATION BREAK</div>
+    <div style="color:#bdbdbd;font-size:14px;margin-top:12px">Grab a drink. The next round starts when the break ends.</div>
+  </div>
+
   <div id="fld-locked" style="display:none;text-align:center;padding:60px 20px">
     <div style="color:#39d353;font-family:var(--px);font-size:14px;letter-spacing:1px;line-height:2">✓ XI LOCKED</div>
     <div style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:14px">Waiting for the reveal<br>on the big screen…</div>
@@ -202,6 +208,19 @@
 
     // host odpalil reveal / tabele. Jesli ten telefon zalockowal -> zostaje na "XI LOCKED".
     // Jesli NIE zdazyl (byl jeszcze w drafcie) -> zabierz go z draftu na ekran revealu.
+    // PRZERWA: zaslon wszystko komunikatem. Po RESUME wracamy do tabeli i READY jak zwykle.
+    if (r.status === "break"){
+      playing = false;
+      ["xad-draft","fld-waiting","fld-locked","fld-reveal"].forEach(function(id){
+        const n = document.getElementById(id); if (n) n.style.display = "none";
+      });
+      document.getElementById("fld-break").style.display = "";
+      try { window.scrollTo(0,0); } catch(e){}
+      return;
+    }
+    const brk = document.getElementById("fld-break");
+    if (brk) brk.style.display = "none";
+
     if (r.status === "reveal" || r.status === "table"){
       playing = false;
       // ODSWIEZENIE STRONY w trakcie revealu/tabeli gubi flage "locked" (zyje tylko w pamieci).
