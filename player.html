@@ -308,6 +308,13 @@
     if (msg){ msg.style.display = "none"; msg.textContent = ""; }
   }
   function showReady(){                    // wolane tylko przy status="table" i locked===true
+    // Kontener "XI LOCKED" MUSI byc widoczny — ekran przerwy go chowa, a READY siedzi w srodku.
+    // Bez tego po RESUME telefon zostawal czarny az do odswiezenia.
+    const wrap = document.getElementById("fld-locked");
+    if (wrap) wrap.style.display = "";
+    const draft = document.getElementById("xad-draft"); if (draft) draft.style.display = "none";
+    const wait = document.getElementById("fld-waiting"); if (wait) wait.style.display = "none";
+    const rev = document.getElementById("fld-reveal"); if (rev) rev.style.display = "none";
     const box = document.getElementById("ready-box");
     const btn = document.getElementById("ready-btn");
     const done = document.getElementById("ready-done");
