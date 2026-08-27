@@ -1371,13 +1371,41 @@
           t._el = row; t._pos = row.querySelector(".bt-pos"); t._storyEl = row.querySelector(".bt-story");
         });
         showOnly("tableview");
-        function placeAll(){
+        // FLIP jak w tabeli koncowej: zapamietaj gdzie wiersze byly, przestaw, cofnij je wizualnie
+        // i pusc do nowych miejsc — druzyny MIJAJA SIE plynnie zamiast przeskakiwac.
+        function placeAll(animate){
+          const before = {};
+          if (animate){
+            teams.forEach(function(t){
+              if (t._el && t._el.style.display !== "none") before[t.name] = t._el.getBoundingClientRect().top;
+            });
+          }
           rankByCur().forEach(function(t, rank){
             t._pos.textContent = (rank + 1);
             wrap.appendChild(t._el);
           });
+          if (!animate) return;
+          let moved = false;
+          teams.forEach(function(t){
+            if (before[t.name] === undefined) return;
+            const d = before[t.name] - t._el.getBoundingClientRect().top;
+            if (!d) return;
+            moved = true;
+            t._el.style.transition = "none";
+            t._el.style.transform = "translateY(" + d + "px)";
+            t._el.style.position = "relative";
+            t._el.style.zIndex = (d > 0) ? "3" : "2";   // wjezdzajacy w gore PRZED spadajacym
+          });
+          if (!moved) return;
+          requestAnimationFrame(function(){ requestAnimationFrame(function(){
+            teams.forEach(function(t){
+              if (before[t.name] === undefined) return;
+              t._el.style.transition = "transform 1.5s cubic-bezier(.5,.05,.2,1),box-shadow .3s,background .3s,border-color .3s";
+              t._el.style.transform = "translateY(0)";
+            });
+          }); });
         }
-        placeAll();
+        placeAll(false);
         // 1) BAZA: wjazd od dolu — sala widzi ranking BEZ historii
         const baseOrd = rankByCur();
         for (let rank = baseOrd.length - 1; rank >= 0; rank--){
@@ -1413,8 +1441,8 @@
             }
             await sleep(2000);
             t.cur = t.base + (t.story || 0);
-            placeAll();
-            await sleep(dlt(t) > 0 ? 1600 : 900);
+            placeAll(true);
+            await sleep(dlt(t) > 0 ? 2400 : 900);   // dluzej: przejazd trwa 1.5s, niech sala zdazy zobaczyc
             t._el.style.boxShadow = "";
             t._el.style.background = "rgba(15,23,16,.85)";
             await sleep(250);
