@@ -7,7 +7,7 @@
 <style>
   :root { --bg:#0a0f0a; --panel:#0f1710; --gold:#e9c46a; --green:#39d353; --text:#d8d8d8; --dim:#8a8576; }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font-family:"Courier New",monospace; padding:22px; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Courier New",monospace; padding:22px; }
   h1 { color:var(--gold); letter-spacing:2px; font-size:18px; margin:0 0 4px; }
   .sub { color:var(--dim); font-size:12px; margin-bottom:24px; }
   button { background:var(--gold); color:#111; border:0; padding:14px 22px; font-family:inherit; font-size:15px; letter-spacing:2px; cursor:pointer; border-radius:6px; }
@@ -21,10 +21,10 @@
   .count { color:var(--green); letter-spacing:2px; font-size:13px; margin-bottom:8px; }
   .hint { color:var(--dim); font-size:12px; margin-top:16px; line-height:1.6; word-break:break-all; }
   /* ── KONSOLA HOSTA: dwie kolumny, bez scrolla strony (lewa=sterowanie, prawa=druzyny) ── */
-  #live { gap:22px; flex:1 1 auto; min-height:0; align-items:stretch; }
-  .hostcol-left { flex:0 0 400px; max-width:400px; display:flex; flex-direction:column; overflow:auto; }
+  #live { gap:22px; align-items:stretch; }
+  .hostcol-left { flex:0 0 400px; max-width:400px; display:flex; flex-direction:column; }
   .hostcol-right { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
-  #teamlist { display:grid; grid-template-columns:repeat(auto-fill,236px); gap:10px; align-content:start; justify-content:start; overflow:auto; min-height:0; padding-right:4px; }
+  #teamlist { display:grid; grid-template-columns:repeat(auto-fill,236px); gap:10px; align-content:start; justify-content:start; padding-right:4px; }
   #teamlist:empty::before { content:"waiting for the first team\2026"; color:#4e7a4e; letter-spacing:2px; font-size:14px; }
 </style>
 </head>
