@@ -7,7 +7,7 @@
 <style>
   :root { --bg:#0a0f0a; --panel:#0f1710; --gold:#e9c46a; --green:#39d353; --text:#d8d8d8; --dim:#8a8576; }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font-family:"Courier New",monospace; padding:24px; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Courier New",monospace; padding:22px; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
   h1 { color:var(--gold); letter-spacing:2px; font-size:18px; margin:0 0 4px; }
   .sub { color:var(--dim); font-size:12px; margin-bottom:24px; }
   button { background:var(--gold); color:#111; border:0; padding:14px 22px; font-family:inherit; font-size:15px; letter-spacing:2px; cursor:pointer; border-radius:6px; }
@@ -16,9 +16,15 @@
   #qr { background:#fff; padding:12px; border-radius:8px; display:inline-block; margin-top:12px; min-height:40px; }
   #qr img { display:block; }
   .teams { margin-top:24px; }
-  .team { background:#132013; border:1px solid #2a4; border-radius:8px; padding:12px 16px; margin-bottom:8px; font-size:16px; }
+  .team { background:#132013; border:1px solid #2a4; border-radius:8px; padding:12px 16px; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .count { color:var(--green); letter-spacing:2px; font-size:13px; margin-bottom:8px; }
   .hint { color:var(--dim); font-size:12px; margin-top:16px; line-height:1.6; word-break:break-all; }
+  /* ── KONSOLA HOSTA: dwie kolumny, bez scrolla strony (lewa=sterowanie, prawa=druzyny) ── */
+  #live { gap:22px; flex:1 1 auto; min-height:0; align-items:stretch; }
+  .hostcol-left { flex:0 0 400px; max-width:400px; display:flex; flex-direction:column; overflow:auto; }
+  .hostcol-right { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
+  #teamlist { display:grid; grid-template-columns:repeat(auto-fill,236px); gap:10px; align-content:start; justify-content:start; overflow:auto; min-height:0; padding-right:4px; }
+  #teamlist:empty::before { content:"waiting for the first team\2026"; color:#4e7a4e; letter-spacing:2px; font-size:14px; }
 </style>
 </head>
 <body>
@@ -47,7 +53,8 @@
     <div class="hint">Click to create a room. A code + QR will appear. Phones scan the QR (or open the link) to join.</div>
   </div>
 
-  <div id="live" class="card" style="display:none">
+  <div id="live" style="display:none">
+    <div class="hostcol-left card">
     <div class="sub">ROOM CODE</div>
     <div id="code" class="code"></div>
     <div id="qr" style="max-width:190px;margin:12px auto 0"></div>
@@ -55,10 +62,6 @@
       <button id="opentv" style="background:#132013;color:var(--gold);border:1px solid var(--gold);padding:12px 8px;font-family:inherit;font-size:12px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128250; OPEN TV</button>
       <button id="copytv" style="background:#132013;color:#39d353;border:1px solid #2a4;padding:12px 8px;font-family:inherit;font-size:12px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128279; TV LINK</button>
       <button id="copyjoin" style="grid-column:1/-1;background:#132013;color:var(--gold);border:1px solid var(--gold);padding:12px 8px;font-family:inherit;font-size:12px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128241; COPY PLAYER LINK</button>
-    </div>
-    <div class="teams" style="margin-top:18px">
-      <div id="count" class="count" style="letter-spacing:3px">TEAMS · 0</div>
-      <div id="teamlist"></div>
     </div>
     <div id="startbar" style="margin-top:20px;display:none">
       <button id="startbtn" style="width:100%;background:var(--gold);color:#111;border:0;padding:16px;font-family:inherit;font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:6px">▶ START GAME</button>
@@ -92,6 +95,13 @@
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(233,196,106,.18)">
       <div class="hint" id="joinlink" style="word-break:break-all;overflow-wrap:anywhere;line-height:1.6;opacity:.75"></div>
       <div class="hint" style="margin-top:8px;line-height:1.6">&#9888; Phones must join THIS code. NEW GAME starts a fresh, empty room.</div>
+    </div>
+    </div><!-- /hostcol-left -->
+    <div class="hostcol-right">
+      <div class="teams" style="margin-top:0">
+        <div id="count" class="count" style="letter-spacing:3px">TEAMS &#183; 0</div>
+        <div id="teamlist"></div>
+      </div>
     </div>
   </div>
 
@@ -413,7 +423,7 @@
       try { localStorage.setItem("fl_host_room", room.code); } catch(e){}
 
       document.getElementById("start").style.display = "none";
-      document.getElementById("live").style.display = "block";
+      document.getElementById("live").style.display = "flex";
       document.getElementById("code").textContent = room.code;
 
       const link = baseUrl() + "/join.html?room=" + room.code;
