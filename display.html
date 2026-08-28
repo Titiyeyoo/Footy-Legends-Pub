@@ -15,39 +15,42 @@
   body.mode-tv { padding:0; }
   /* POCZEKALNIA = ekran powitalny na TV: musi zmiescic sie CO DO PIKSELA.
      Padding body (24px) + wysokosc 100vh zawsze dawaly pasek przewijania. */
-/* ===== EKRAN POWITALNY (lobby) ===== */
-  #lobby { display:none; flex-direction:column; width:100%; height:100vh; overflow:hidden;
-           padding:2.2vh 3vw; box-sizing:border-box; }
-  body.lobby-fit { padding:0; height:100vh; min-height:0; overflow:hidden; justify-content:flex-start; }
-  .lb-top { display:flex; align-items:center; gap:18px; flex:0 0 auto; }
-  #lobby-logo { width:min(19vh,180px); height:auto; }
+/* ===== EKRAN POWITALNY (lobby) — WARIANT C =====
+   LEWA kolumna = strefa JOIN (STALA szerokosc, zawsze identyczna).
+   PRAWA = tablica druzyn na PELNEJ WYSOKOSCI -> miesci ~20 bez scrolla. */
+  #lobby { display:none; width:100%; height:100vh; overflow:hidden; box-sizing:border-box; }
+  body.lobby-fit { padding:0; height:100vh; min-height:0; overflow:hidden; }
+  body.lobby-fit #lobby { display:flex; }
+  .lb-left { flex:0 0 clamp(280px,30vw,460px); display:flex; flex-direction:column;
+             align-items:center; justify-content:center; gap:1.2vh;
+             padding:2vh 1.6vw; box-sizing:border-box; border-right:1px solid rgba(233,196,106,.18); }
+  #lobby-logo { width:min(17vh,170px); height:auto; }
   .lb-name { display:none; color:var(--gold); font-size:clamp(14px,2.4vh,22px); letter-spacing:3px; }
-  .lb-tag { display:flex; flex-direction:column; gap:.4vh; margin-left:8px; }
-  .lb-tag1 { color:var(--gold); font-size:clamp(13px,2.6vh,25px); letter-spacing:4px; }
-  .lb-tag2 { color:var(--dim); font-size:clamp(10px,1.8vh,17px); letter-spacing:3px; }
-  .lb-count { margin-left:auto; color:var(--green); font-size:clamp(10px,1.6vh,15px); letter-spacing:3px; }
-  .lb-mid { flex:0 0 auto; display:flex; flex-direction:column; align-items:center; margin:3vh 0 2vh; }
-  .lb-join { color:#cfcfcf; font-size:clamp(11px,2vh,19px); letter-spacing:4px; margin-bottom:1vh; }
-  .lb-codewrap { display:flex; align-items:center; gap:2.2vw; }
-  .lb-code { color:var(--gold); font-size:clamp(40px,12.5vh,124px); letter-spacing:.12em; line-height:1; }
+  .lb-tag1 { color:var(--gold); font-size:clamp(12px,2.2vh,21px); letter-spacing:4px; }
+  .lb-tag2 { color:var(--dim); font-size:clamp(9px,1.5vh,14px); letter-spacing:3px; margin-top:-.4vh; }
+  .lb-join { color:#cfcfcf; font-size:clamp(9px,1.4vh,13px); letter-spacing:3px; text-align:center;
+             line-height:1.9; margin-top:1.2vh; }
+  .lb-url { color:var(--gold); font-size:clamp(10px,1.6vh,15px); }
+  .lb-code { color:var(--gold); font-size:clamp(40px,11vh,104px); letter-spacing:.1em; line-height:1; }
   .lb-qrbox { text-align:center; }
   .lb-orscan { color:var(--dim); font-size:clamp(8px,1.2vh,12px); letter-spacing:3px; margin-top:.6vh; }
-  #qr { background:#fff; padding:min(1.2vh,12px); border-radius:8px; line-height:0; display:inline-block; }
-  #qr img { display:block; width:min(11.5vh,108px); height:auto; }
-  .lb-bottom { flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
-               align-items:center; justify-content:center; overflow:hidden; }
-  /* STALY rozmiar kafelka — rosnie LICZBA RZEDOW, nie maleja karty */
-  .lb-grid { display:flex; flex-wrap:wrap; gap:1.1vh 1vw; justify-content:center; align-content:flex-start; width:100%; }
+  #qr { background:#fff; padding:min(1.1vh,10px); border-radius:8px; line-height:0; display:inline-block; }
+  #qr img { display:block; width:min(12vh,112px); height:auto; }
+  .lb-right { flex:1 1 auto; min-width:0; display:flex; flex-direction:column;
+              align-items:center; justify-content:center; padding:2.5vh 2vw; box-sizing:border-box; overflow:hidden; }
+  .lb-count { color:var(--green); font-size:clamp(11px,1.9vh,18px); letter-spacing:4px; margin-bottom:2vh; flex:0 0 auto; }
+  .lb-grid { display:flex; flex-wrap:wrap; gap:1.1vh .8vw; justify-content:center;
+             align-content:center; width:100%; min-height:0; }
   .lb-grid .team { flex:0 0 auto; background:#132013; border:1px solid #2a4a2a; border-radius:8px;
                    color:var(--gold); letter-spacing:1px; text-align:center;
                    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  /* ROZMIAR WG LICZBY DRUZYN — kurczymy dopiero, gdy naprawde brakuje miejsca */
-  .lb-grid.sz1 .team { width:clamp(170px,22vw,300px); font-size:clamp(15px,2.8vh,26px); padding:1.8vh 16px; }
-  .lb-grid.sz2 .team { width:clamp(140px,17vw,230px); font-size:clamp(13px,2.2vh,20px); padding:1.4vh 14px; }
-  .lb-grid.sz3 .team { width:clamp(120px,14vw,180px); font-size:clamp(11px,1.8vh,16px); padding:1.1vh 10px; }
-  .lb-grid.sz4 .team { width:clamp(96px,11vw,150px); font-size:clamp(10px,1.5vh,13px); padding:.7vh 8px; }
-  .lb-sep { width:min(46vw,560px); height:1px; background:rgba(233,196,106,.22); margin-bottom:2.4vh; flex:0 0 auto; }
-  .lb-waiting { color:#4e7a4e; font-size:clamp(11px,1.8vh,16px); letter-spacing:3px; animation:xadPulse 2.4s ease-in-out infinite; }
+  .lb-grid.sz1 .team { width:clamp(190px,26vw,340px); font-size:clamp(16px,3vh,30px); padding:2vh 16px; }
+  .lb-grid.sz2 .team { width:clamp(160px,20vw,260px); font-size:clamp(14px,2.4vh,23px); padding:1.5vh 14px; }
+  .lb-grid.sz3 .team { width:clamp(130px,15vw,200px); font-size:clamp(12px,1.9vh,17px); padding:1.1vh 10px; }
+  .lb-grid.sz4 .team { width:clamp(112px,12vw,165px); font-size:clamp(11px,1.6vh,14px); padding:.8vh 8px; }
+  .lb-grid.sz5 .team { width:clamp(100px,10.5vw,145px); font-size:clamp(10px,1.35vh,12px); padding:.55vh 6px; }
+  .lb-waiting { color:#4e7a4e; font-size:clamp(12px,2vh,19px); letter-spacing:3px; text-align:center;
+                line-height:2; animation:xadPulse 2.4s ease-in-out infinite; }
   @keyframes xadPulse { 0%,100%{ opacity:.45 } 50%{ opacity:1 } }
   /* ── PODIUM NA FINALE (TOP 3 + radary DNA) ── */
   #podium { display:none; width:100%; }
@@ -404,31 +407,24 @@
 
   <!-- LOBBY -->
   <div id="lobby">
-    <!-- EKRAN POWITALNY. Hierarchia: JOIN -> KOD (bohater) -> QR (pomocnik) -> DRUZYNY.
-         Kafelki druzyn maja STALY rozmiar; przy wiekszej liczbie przybywa RZEDOW, nie kurcza sie. -->
-    <div class="lb-top">
+    <div class="lb-left">
       <img id="lobby-logo" src="xad-logo.png" alt="XI After Dark"
            onerror="this.style.display='none';var h=document.getElementById('lobby-name');if(h)h.style.display='block'">
-      <span id="lobby-name" class="lb-name">XI AFTER DARK</span>
-      <span class="lb-tag"><span class="lb-tag1">BUILD YOUR XI</span><span class="lb-tag2">THE BEST STORY WINS</span></span>
-      <span id="count" class="lb-count"></span>
-    </div>
-
-    <div class="lb-mid">
-      <div class="lb-join">JOIN AT <span style="text-transform:none;color:var(--gold)">elevenafterdark.com/join</span></div>
-      <div class="lb-codewrap">
-        <div id="code" class="lb-code">----</div>
-        <div class="lb-qrbox">
-          <div id="qr"></div>
-          <div class="lb-orscan">OR SCAN</div>
-        </div>
+      <div id="lobby-name" class="lb-name">XI AFTER DARK</div>
+      <div class="lb-tag1">BUILD YOUR XI</div>
+      <div class="lb-tag2">THE BEST STORY WINS</div>
+      <div class="lb-join">JOIN AT<br><span class="lb-url">ELEVENAFTERDARK.COM/JOIN</span></div>
+      <div id="code" class="lb-code">----</div>
+      <div class="lb-qrbox">
+        <div id="qr"></div>
+        <div class="lb-orscan">OR SCAN</div>
       </div>
     </div>
 
-    <div class="lb-bottom">
-      <div class="lb-sep"></div>
+    <div class="lb-right">
+      <div id="count" class="lb-count"></div>
       <div id="grid" class="lb-grid"></div>
-      <div id="lb-waiting" class="lb-waiting">WAITING FOR THE FIRST TEAM&#8230;</div>
+      <div id="lb-waiting" class="lb-waiting">WAITING FOR<br>THE FIRST TEAM&#8230;</div>
     </div>
   </div>
 
@@ -1112,7 +1108,7 @@
       });
       // 1-3 duze / 4-6 srednie / 7-12 mniejsze / 13+ kompaktowe
       const n = teams.length;
-      const sz = n <= 3 ? "sz1" : n <= 6 ? "sz2" : n <= 12 ? "sz3" : "sz4";
+      const sz = n <= 3 ? "sz1" : n <= 6 ? "sz2" : n <= 12 ? "sz3" : n <= 20 ? "sz4" : "sz5";
       grid.className = "lb-grid " + sz;
       // pusty ekran nie moze wygladac na zepsuty: zamiast "TEAMS · 0" pulsuje zaproszenie
       const w = el("lb-waiting"); if (w) w.style.display = teams.length ? "none" : "block";
