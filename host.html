@@ -50,16 +50,14 @@
   <div id="live" class="card" style="display:none">
     <div class="sub">ROOM CODE</div>
     <div id="code" class="code"></div>
-    <div id="qr"></div>
-    <div id="tvbar" style="display:flex;gap:10px;margin-top:14px">
-      <button id="opentv" style="flex:1;background:#132013;color:var(--gold);border:1px solid var(--gold);padding:14px;font-family:inherit;font-size:14px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128250; OPEN TV</button>
-      <button id="copytv" style="flex:1;background:#132013;color:#39d353;border:1px solid #2a4;padding:14px;font-family:inherit;font-size:14px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128279; COPY TV LINK</button>
+    <div id="qr" style="max-width:190px;margin:12px auto 0"></div>
+    <div id="tvbar" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px">
+      <button id="opentv" style="background:#132013;color:var(--gold);border:1px solid var(--gold);padding:12px 8px;font-family:inherit;font-size:12px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128250; OPEN TV</button>
+      <button id="copytv" style="background:#132013;color:#39d353;border:1px solid #2a4;padding:12px 8px;font-family:inherit;font-size:12px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128279; TV LINK</button>
+      <button id="copyjoin" style="grid-column:1/-1;background:#132013;color:var(--gold);border:1px solid var(--gold);padding:12px 8px;font-family:inherit;font-size:12px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128241; COPY PLAYER LINK</button>
     </div>
-    <div style="margin-top:10px">
-      <button id="copyjoin" style="width:100%;background:#132013;color:var(--gold);border:1px solid var(--gold);padding:14px;font-family:inherit;font-size:14px;letter-spacing:1px;cursor:pointer;border-radius:6px">&#128241; COPY PLAYER LINK</button>
-    </div>
-    <div class="teams">
-      <div id="count" class="count">TEAMS · 0</div>
+    <div class="teams" style="margin-top:18px">
+      <div id="count" class="count" style="letter-spacing:3px">TEAMS · 0</div>
       <div id="teamlist"></div>
     </div>
     <div id="startbar" style="margin-top:20px;display:none">
@@ -91,8 +89,10 @@
     <div id="newnightbar" style="margin-top:16px;display:none">
       <button id="newnightbtn" style="width:100%;background:var(--gold);color:#111;border:0;padding:18px;font-family:inherit;font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:6px;box-shadow:0 4px 0 #b8963f">&#127916; NEW NIGHT</button>
     </div>
-    <div class="hint" id="joinlink"></div>
-    <div class="hint">&#9888; Phones must join THIS code. Clicking NEW GAME again starts a fresh, empty room.</div>
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(233,196,106,.18)">
+      <div class="hint" id="joinlink" style="word-break:break-all;overflow-wrap:anywhere;line-height:1.6;opacity:.75"></div>
+      <div class="hint" style="margin-top:8px;line-height:1.6">&#9888; Phones must join THIS code. NEW GAME starts a fresh, empty room.</div>
+    </div>
   </div>
 
   <!-- OKNO POTWIERDZENIA w stylu Footy Legends (zamiast systemowego confirm) -->
