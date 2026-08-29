@@ -63,9 +63,9 @@
   .pd-radar { width:100%; max-width:min(22vw,340px); }
   /* STALE wysokosci blokow tekstowych — dzieki temu wyniki i slupki sa na JEDNEJ wysokosci
      w kazdej kolumnie, nawet gdy nazwa lamie sie na 2 linie albo podtytul typu jest dlugi */
-  .pd-name  { font-size:clamp(13px,1.5vw,26px); color:var(--text); letter-spacing:2px; margin-top:.6vh;
-              text-align:center; line-height:1.2; width:100%; overflow-wrap:break-word;
-              min-height:2.4em; display:flex; align-items:center; justify-content:center; }
+  .pd-name  { font-size:clamp(13px,1.4vw,24px); color:var(--text); letter-spacing:1px; margin-top:.6vh;
+              text-align:center; line-height:1.2; width:100%; overflow-wrap:anywhere; word-break:break-word;
+              min-height:2.4em; display:flex; flex-direction:column; justify-content:center; }
   .pd-type  { font-size:clamp(8px,.8vw,14px); color:var(--gold); letter-spacing:2px; margin-top:.5vh;
               text-align:center; min-height:1.3em; }
   .pd-sub   { font-size:clamp(7px,.65vw,11px); color:var(--dim); letter-spacing:1px; margin-top:.35vh; text-align:center;
@@ -80,7 +80,7 @@
             background:linear-gradient(180deg,#2a2410,#14110a); box-shadow:0 0 26px rgba(233,196,106,.3); }
   .pd-col.p2 .pd-bar { height:7.5vh; }
   .pd-col.p3 .pd-bar { height:5.5vh; }
-  .pd-col.p1 .pd-name  { color:var(--gold); font-size:clamp(15px,1.9vw,32px); text-shadow:0 0 18px rgba(233,196,106,.4); }
+  .pd-col.p1 .pd-name  { color:var(--gold); font-size:clamp(15px,1.7vw,28px); text-shadow:0 0 18px rgba(233,196,106,.4); }
   .pd-col.p1 .pd-score { font-size:clamp(18px,2.4vw,42px); }
   /* ── KONFETTI NA FINALE — przeniesione 1:1 z solo (DOM+CSS, zero biblioteki).
      Roznica jedyna: z-index 40 (nie 9999) + .pd-wrap podniesione do 50 wyzej,
