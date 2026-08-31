@@ -26,6 +26,19 @@
   .hostcol-right { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
   #teamlist { display:grid; grid-template-columns:repeat(auto-fill,236px); gap:10px; align-content:start; justify-content:start; padding-right:4px; }
   #teamlist:empty::before { content:"waiting for the first team\2026"; color:#4e7a4e; letter-spacing:2px; font-size:14px; }
+  /* ── PASEK FAZY (góra prawej kolumny, nad TEAMS) — kolor niesie sygnał operacyjny ── */
+  .phasebar { margin-bottom:18px; padding:12px 16px; border:1px solid #223; border-radius:10px; background:#0f1710; }
+  .phase-label { font-size:20px; letter-spacing:3px; font-weight:bold; line-height:1.1; }
+  .phase-detail { font-size:13px; letter-spacing:2px; color:var(--dim); margin-top:5px; }
+  .phase-lobby  .phase-label, .phase-table .phase-label { color:var(--green); }
+  .phase-lobby, .phase-table { border-color:rgba(57,211,83,.4); }
+  .phase-draft  .phase-label { color:var(--gold); }
+  .phase-draft  { border-color:rgba(233,196,106,.5); }
+  .phase-reveal .phase-label { color:#e0533a; }
+  .phase-reveal { border-color:#e0533a; box-shadow:0 0 0 1px rgba(224,83,58,.35); }
+  .phase-break  .phase-label { color:#e9a13a; }
+  .phase-break  { border-color:rgba(233,161,58,.5); }
+  .phase-ended  .phase-label { color:var(--dim); }
 </style>
 </head>
 <body>
@@ -101,6 +114,10 @@
     </div>
     </div><!-- /hostcol-left -->
     <div class="hostcol-right">
+      <div id="phasebar" class="phasebar phase-lobby">
+        <div id="phase-label" class="phase-label">LOBBY</div>
+        <div id="phase-detail" class="phase-detail">WAITING TO START</div>
+      </div>
       <div class="teams" style="margin-top:0">
         <div id="count" class="count" style="letter-spacing:3px">TEAMS &#183; 0</div>
         <div id="teamlist"></div>
@@ -182,6 +199,7 @@
     async function maybeAutoReveal(){
       if (!roomId || roomStatus !== "playing" || autoRevealing) return;
       const st = await lockStats();               // teams = nie-spectator; locked = wpisy tej rundy
+      pbLocked = st.locked; pbTeams = st.teams; paintPhaseCount("playing");
       if (st.locked < 1) return;                  // nic do odsloniecia
       let go = (st.locked >= st.teams);           // wszyscy grajacy zalockowali -> reveal od razu
       if (!go){
@@ -494,6 +512,7 @@
         const { count } = await db.from("teams").select("*", { count:"exact", head:true })
           .eq("room_id", roomId).eq("ready_round", currentRound);
         const X = count || 0;
+        pbReady = X; pbReadyTot = Y; paintPhaseCount("table");
         if (X < Math.floor(Y / 2) + 1) return;              // jeszcze nie wiekszosc — czekamy na ludzi
         if (roomStatus !== "table" || autoNextDoneRound === currentRound) return;   // stan mogl sie zmienic
         autoNexting = true;
@@ -518,8 +537,42 @@
     }
 
     // ustaw przyciski wg stanu pokoju (dziala takze po odswiezeniu)
+    // ── PASEK FAZY: liczby reużyte z lockStats/ready (zero nowych zapytań); etykieta z paintButtons ──
+    let pbLocked = 0, pbTeams = 0, pbReady = 0, pbReadyTot = 0;
+    function phaseInfo(status){
+      const r = currentRound || 1;
+      switch (status){
+        case "playing": return { key:"draft",  label:"DRAFT \u00b7 R" + r };
+        case "reveal":  return { key:"reveal", label:"REVEAL \u00b7 R" + r };
+        case "table":   return { key:"table",  label:"TABLE \u00b7 R" + r };
+        case "break":   return { key:"break",  label:"BREAK" };
+        case "ended":   return { key:"ended",  label:"NIGHT ENDED" };
+        default:        return { key:"lobby",  label:"LOBBY" };
+      }
+    }
+    function paintPhaseCount(status){
+      status = status || roomStatus;
+      const d = document.getElementById("phase-detail"); if (!d) return;
+      let txt;
+      if (status === "playing")      txt = pbTeams    ? (pbLocked + " / " + pbTeams + " LOCKED IN") : "WAITING FOR PICKS\u2026";
+      else if (status === "reveal")  txt = "ON THE BIG SCREEN";
+      else if (status === "table")   txt = pbReadyTot ? (pbReady + " / " + pbReadyTot + " READY") : "WAITING\u2026";
+      else if (status === "break")   txt = "ON BREAK";
+      else if (status === "ended")   txt = "\u2014";
+      else                           txt = "WAITING TO START";
+      d.textContent = txt;
+    }
+    function setPhaseBar(status){
+      const pb = document.getElementById("phasebar"); if (!pb) return;
+      const info = phaseInfo(status);
+      pb.className = "phasebar phase-" + info.key;
+      const lab = document.getElementById("phase-label"); if (lab) lab.textContent = info.label;
+      paintPhaseCount(status);
+    }
+
     function paintButtons(status){
       roomStatus = status;   // zapamietaj — createRoom sprawdza, czy gra trwa
+      setPhaseBar(status);   // PASEK FAZY: etykieta + kolor na kazdej zmianie stanu
       const ri = document.getElementById("roundinfo");
       const sb = document.getElementById("startbar");
       const rb = document.getElementById("revealbar");
