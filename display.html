@@ -1484,35 +1484,46 @@
         }
         await sleep(1400);
 
-        // 2) Most: jasny komunikat ze zaraz wjadaa bonusy (albo ich brak)
-        // Pokazuj akt stories gdy JEST NAZWA (z title jak na kartach) — nie tylko gdy w2>0 z re-detectu
+        // 2) STORIES: pakiet (reszta) w JEDNYM momencie + do 3 najmocniejszych po kolei (crescendo)
         const withStory = teams.filter(function(t){ return !!t.storyName; });
         if (!withStory.length){
           el("tv-sub").textContent = "NO STORIES FOUND \u00b7 TABLE STANDS";
           await sleep(1800);
         } else {
-          el("tv-sub").textContent = "STORIES FOUND \u00b7 ADDING BONUSES\u2026";
-          await sleep(1600);
+          el("tv-sub").textContent = "THE STORIES \u00b7 MIXING IT UP";   // jeden staly tytul fazy (bez skakania z nazwa)
+          await sleep(1200);
 
-          const basePos = {}; rankByCur().forEach(function(t,i){ basePos[t.name] = i; });
-          const finalPos = {}; teams.slice().sort(function(a,b){ return ((b.base+b.story)-(a.base+a.story)) || (b.base-a.base); }).forEach(function(t,i){ finalPos[t.name] = i; });
-          const dlt = function(t){ return Math.abs(basePos[t.name] - finalPos[t.name]); };
-          withStory.sort(function(a,b){ return dlt(a) - dlt(b); });
+          // pozycja KONCOWA (wszystkie historie) -> wybor beatow: podium najpierw, potem najblizsze podium
+          const finalOrd = teams.slice().sort(function(a,b){ return ((b.base+b.story)-(a.base+a.story)) || (b.base-a.base); });
+          const finalPos = {}; finalOrd.forEach(function(t,i){ finalPos[t.name] = i; });
+          const podium  = withStory.filter(function(t){ return finalPos[t.name] < 3; });
+          const nearest = withStory.filter(function(t){ return finalPos[t.name] >= 3; })
+                                   .sort(function(a,b){ return finalPos[a.name] - finalPos[b.name]; });
+          const beats = podium.concat(nearest).slice(0, 3)
+                              .sort(function(a,b){ return finalPos[b.name] - finalPos[a.name]; }); // crescendo: najslabszy -> zwyciezca na koncu
+          const beatSet = {}; beats.forEach(function(t){ beatSet[t.name] = true; });
+          const rest = withStory.filter(function(t){ return !beatSet[t.name]; });
 
-          for (let i = 0; i < withStory.length; i++){
-            const t = withStory[i];
-            const label = (t.emoji ? t.emoji + " " : "") + (t.storyName || "STORY");
-            el("tv-sub").innerHTML = "&#9733; STORY FOUND \u00b7 " + safe(label) + " \u00b7 " + safe(t.name);
+          // PAKIET: reszta historii wskakuje w JEDNYM momencie + plakietki OD RAZU (nie po fakcie)
+          if (rest.length){
+            rest.forEach(function(t){
+              t.cur = t.base + (t.story || 0);
+              if (t._storyEl){ t._storyEl.style.display = "block"; t._storyEl.innerHTML = "&#9733; " + safe(t.storyName || "STORY"); }
+            });
+            placeAll(true);
+            await sleep(2000);   // jeden ruch (przejazd 1.5s) + chwila
+          }
+
+          // BEATY: TOP-historie po kolei — poswiata, plakietka, spowolnienie (jak gra pokazuje teraz)
+          for (let i = 0; i < beats.length; i++){
+            const t = beats[i];
             t._el.style.boxShadow = "0 0 0 2px #e9c46a, 0 0 22px rgba(233,196,106,.6)";
             t._el.style.background = "rgba(233,196,106,.16)";
-            if (t._storyEl){
-              t._storyEl.style.display = "block";
-              t._storyEl.innerHTML = "&#9733; " + safe(t.storyName || "STORY");
-            }
-            await sleep(2000);
+            if (t._storyEl){ t._storyEl.style.display = "block"; t._storyEl.innerHTML = "&#9733; " + safe(t.storyName || "STORY"); }
+            await sleep(900);
             t.cur = t.base + (t.story || 0);
             placeAll(true);
-            await sleep(dlt(t) > 0 ? 2400 : 900);   // dluzej: przejazd trwa 1.5s, niech sala zdazy zobaczyc
+            await sleep(2400);   // przejazd 1.5s + niech sala zobaczy wjazd
             t._el.style.boxShadow = "";
             t._el.style.background = "rgba(15,23,16,.85)";
             await sleep(250);
