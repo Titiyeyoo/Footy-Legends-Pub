@@ -339,7 +339,8 @@
   .tv-th { text-align:center; margin-bottom:22px; }
   .tv-th .t1 { color:var(--gold); font-size:18px; letter-spacing:5px; }
   .tv-th .t2 { color:var(--dim); font-size:9px; letter-spacing:3px; margin-top:12px; }
-  table.titles { width:100%; border-collapse:collapse; }
+  table.titles { border-collapse:collapse; }
+  .tt-cols { display:flex; justify-content:center; align-items:flex-start; gap:clamp(24px,4vw,64px); }
   table.titles th { color:var(--dim); font-size:9px; letter-spacing:2px; padding:10px 12px; text-align:left; border-bottom:1px solid #223; }
   table.titles th.th-num { text-align:center; white-space:nowrap; }
   table.titles td { padding:14px 12px; border-bottom:1px solid #162116; vertical-align:middle; }
@@ -1686,11 +1687,24 @@
                  : '<td class="tt-cell none">&mdash;</td>')
             +  '</tr>';
         }
-        function paint(order, opaque){
-          let h = '<table class="titles' + (order.length > 6 ? ' dense' : '') + '">';
+        function tableFor(slice, startIdx, dense){
+          let h = '<table class="titles' + (dense ? ' dense' : '') + '">';
           h += '<tr><th></th><th></th><th class="th-num">STORIES</th><th>BEST STORY</th></tr>';
-          order.forEach(function(t, i){ h += rowHTML(t, i); });
-          el("titlestable").innerHTML = h + '</table>';
+          slice.forEach(function(t, k){ h += rowHTML(t, startIdx + k); });
+          return h + '</table>';
+        }
+        function paint(order, opaque){
+          const two = order.length >= 10;                         // 10+ -> dwie kolumny
+          const perCol = two ? Math.ceil(order.length / 2) : order.length;
+          const dense = perCol > 6;                               // gestosc wg NAJWYZSZEJ kolumny
+          let inner;
+          if (two){
+            const half = Math.ceil(order.length / 2);
+            inner = tableFor(order.slice(0, half), 0, dense) + tableFor(order.slice(half), half, dense);
+          } else {
+            inner = tableFor(order, 0, dense);
+          }
+          el("titlestable").innerHTML = '<div class="tt-cols">' + inner + '</div>';
           if (opaque) order.forEach(function(t){ const r = document.getElementById("ov-" + t.id); if (r) r.style.opacity = "1"; });
         }
 
@@ -1715,29 +1729,30 @@
           await sleep(1100);
           // FLIP: zapamietaj GDZIE wiersze byly, przerysuj, potem przesun je z powrotem
           // i pusc do nowych miejsc — dzieki temu druzyny MIJAJA SIE plynnie, a nie przeskakuja.
-          const before = {};
+          const beforeT = {}, beforeL = {};
           prevOrder.forEach(function(t){
             const r = document.getElementById("ov-" + t.id);
-            if (r) before[t.id] = r.getBoundingClientRect().top;
+            if (r){ const rc = r.getBoundingClientRect(); beforeT[t.id] = rc.top; beforeL[t.id] = rc.left; }
           });
           paint(finalOrder, true);
           const rows = [];
           finalOrder.forEach(function(t){
             const r = document.getElementById("ov-" + t.id);
-            if (!r || before[t.id] === undefined) return;
-            const delta = before[t.id] - r.getBoundingClientRect().top;
-            if (!delta) return;
+            if (!r || beforeT[t.id] === undefined) return;
+            const rc = r.getBoundingClientRect();
+            const dT = beforeT[t.id] - rc.top, dL = beforeL[t.id] - rc.left;
+            if (!dT && !dL) return;
             r.style.transition = "none";
-            r.style.transform = "translateY(" + delta + "px)";
+            r.style.transform = "translate(" + dL + "px," + dT + "px)";
             r.style.position = "relative";
-            r.style.zIndex = (delta > 0) ? "3" : "2";   // wchodzacy w gore PRZED tym, ktory spada
+            r.style.zIndex = (dT > 0) ? "3" : "2";   // wchodzacy w gore PRZED tym, ktory spada
             rows.push(r);
           });
           if (rows.length){
             await sleep(60);                              // pozwol przegladarce zapamietac pozycje startowa
             rows.forEach(function(r){
               r.style.transition = "transform 1.6s cubic-bezier(.5,.05,.2,1), background .6s";
-              r.style.transform = "translateY(0)";
+              r.style.transform = "translate(0,0)";
             });
           }
           // podswietl tych, ktorzy AWANSOWALI
