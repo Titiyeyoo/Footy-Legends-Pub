@@ -732,7 +732,7 @@
       const cr = el("changeroom"); if (cr) cr.style.display = (id === "connect") ? "" : "none";
       // QR w rogu: schowany na ekranie laczenia i w poczekalni (tam jest DUZY QR), widoczny przez reszte wieczoru
       const jn = el("joincorner");
-      if (jn) jn.style.display = (id === "connect" || id === "lobby") ? "none" : "block";
+      if (jn) jn.style.display = (id === "connect" || id === "lobby" || id === "summary") ? "none" : "block";
     }
 
 
@@ -1176,7 +1176,10 @@
       const step = room.reveal_step || 0;
 
       if (room.status === "ended"){
-        if ((room.reveal_step || 0) >= 1){
+        const rs = room.reveal_step || 0;
+        if (rs >= 2){
+          if (mode !== "radars"){ mode = "radars"; runFinale(room, { instant:true }); }
+        } else if (rs === 1){
           if (mode !== "summary"){ mode = "summary"; runSummary(room); }
         } else {
           if (mode !== "finale"){ mode = "finale"; runFinale(room); }
@@ -1830,11 +1833,11 @@
       setTimeout(function(){ if (container.parentNode) container.parentNode.removeChild(container); }, 4600);
     }
 
-    async function finalePodium(ranked, skladyD, ileRund){
+    async function finalePodium(ranked, skladyD, ileRund, instant){
       const n = ranked.length, wrap = el("standings"), pod = el("podium");
 
-      // 1) OGON — miejsca od ostatniego w gore do 4. (przy dokladnie 3 druzynach ogona nie ma)
-      if (n > 3){
+      // 1) OGON — tylko przy animacji (instant = same radary TOP 3, bez ogona)
+      if (n > 3 && !instant){
         const rows = [];
         for (let r=4; r<=n; r++){
           const row = document.createElement("div");
@@ -1896,8 +1899,15 @@
       });
       pod.appendChild(box);
       pod.classList.add("on");
-      await sleep(400);
 
+      // wariant STATYCZNY (host wraca do radarow z summary): wszystko od razu, bez animacji/konfetti
+      if (instant){
+        kolumny[3].classList.add("in"); kolumny[2].classList.add("in"); kolumny[1].classList.add("in");
+        el("rv-crown").classList.add("shown");
+        return;
+      }
+
+      await sleep(400);
       // 3) wejscie: 3. -> 2. -> zwyciezca (ostatni beat), korona razem ze zwyciezca
       kolumny[3].classList.add("in"); await sleep(2600);
       kolumny[2].classList.add("in"); await sleep(2600);
@@ -1914,7 +1924,7 @@
       try {
         const { data: rounds } = await db.from("rounds").select("id,round_number").eq("room_id", roomId);
         const roundIds = (rounds || []).map(function(r){ return r.id; });
-        const { data: entries } = await db.from("entries").select("round_id,team_id,score,xi").in("round_id", roundIds);
+        const { data: entries } = await db.from("entries").select("round_id,team_id,score,xi,title").in("round_id", roundIds);
         const { data: teams } = await db.from("teams").select("*").eq("room_id", roomId);
         const playing = (teams || []).filter(function(t){ return t.role !== "spectator"; });
         const nameById = {}; playing.forEach(function(t){ nameById[t.id] = t.name; });
@@ -1941,8 +1951,9 @@
               pCount[nm] = (pCount[nm] || 0) + 1;
               (pTeams[nm] = pTeams[nm] || new Set()).add(e.team_id);
             });
-            try { const sb = window.flStoryBonus ? window.flStoryBonus(names) : null; if (sb && sb.name) narr.add(sb.name); } catch(err){}
           }
+          // historie: autorytatywnie z title (coreKind==="narr"), tak jak liczy LIVE TABLE
+          const stE = story(e); if (stE && stE.coreKind === "narr" && stE.name) narr.add(String(stE.name).trim());
         });
 
         const ranked = playing.map(function(t){ return { id:t.id, name:t.name, score:totals[t.id] }; })
@@ -1972,7 +1983,7 @@
         if (deepP)    tiles.push(tile("\u{1F573}\uFE0F","DEEP CUT OF THE NIGHT", safe(deepP), "only " + safe(deepT) + " fielded them"));
         if (showWins) tiles.push(tile("\u{1F451}","MOST ROUND WINS", safe(nameById[mostTid]), mostN + " round" + (mostN===1?"":"s") + " won"));
         tiles.push(tile("\u{1F3D7}\uFE0F","XIs BUILT", xisBuilt, "squads built tonight"));
-        tiles.push(tile("\u{1F4D6}","STORIES UNCOVERED", narr.size, "different narratives found"));
+        if (narr.size > 0) tiles.push(tile("\u{1F4D6}","STORIES UNCOVERED", narr.size, "different narrative" + (narr.size===1?"":"s") + " found"));
         tiles.push(tile("\u23F1\uFE0F","ROUNDS PLAYED", roundIds.length, "tonight"));
         const four = tiles.slice(0, 4).join("");
 
@@ -1992,11 +2003,13 @@
           + '<div class="sum-foot"><div class="cta">SAME PITCH \u00b7 DIFFERENT GAME</div>'
           +   '<div class="brand">\u{1F319} <b>XI AFTER DARK</b> \u00b7 elevenafterdark.com \u00b7 ' + left + ' legends still waiting</div></div>';
         showOnly("summary");
+        const jcS = el("joincorner"); if (jcS) jcS.style.display = "none";
       } catch(e){ console.error("runSummary", e); }
       busy = false;
     }
 
-    async function runFinale(room){
+    async function runFinale(room, opts){
+      const instant = !!(opts && opts.instant);
       busy = true;
       try {
         const { data: rounds, error: rErr } = await db.from("rounds").select("id,round_number").eq("room_id", roomId);
@@ -2023,6 +2036,7 @@
                               .sort(function(a,b){ return b.score - a.score; });
 
         showOnly("reveal");
+        const jcF = el("joincorner"); if (jcF) jcF.style.display = "none";   // koniec nocy — QR niepotrzebny
         el("rv-title").textContent = "FINAL STANDINGS";
         el("rv-sub").textContent   = roundIds.length + " ROUND" + (roundIds.length===1?"":"S") + " \u00b7 TONIGHT'S TOTAL";
         el("rv-crown").innerHTML   = "\u{1F3C6} CHAMPIONS OF THE NIGHT \u{1F3C6}";
@@ -2033,14 +2047,18 @@
         rvClear();
 
         const n = ranked.length;
-        // 3+ DRUZYN: ogon (miejsca 4..n) od dolu w gore, potem PODIUM z radarami TOP 3
-        if (n >= 3){ await finalePodium(ranked, skladyD, roundIds.length); busy = false; return; }
+        // 3+ DRUZYN: ogon (przy animacji) + PODIUM z radarami TOP 3
+        if (n >= 3){ await finalePodium(ranked, skladyD, roundIds.length, instant); busy = false; return; }
         const rows = [];
         for (let r=1; r<=n; r++){
           const row = document.createElement("div");
           row.className = "lb-row" + (r===1 ? " winner" : "");
           row.innerHTML = '<div class="lb-rank">'+r+'</div><div class="lb-name">&nbsp;</div><div class="lb-score">&bull;&bull;&bull;</div>';
           wrap.appendChild(row); rows.push(row);
+        }
+        if (instant){
+          for (let r=1; r<=n; r++){ rows[r-1].querySelector(".lb-name").innerHTML = safe(ranked[r-1].name); rows[r-1].querySelector(".lb-score").textContent = ranked[r-1].score; rows[r-1].classList.add("shown"); }
+          el("rv-crown").classList.add("shown"); busy = false; return;
         }
         await sleep(900);
         // od dolu w gore: nazwa I WYNIK razem (koniec z kropkami na 2. miejscu, gdy zwyciezca ma liczbe)
