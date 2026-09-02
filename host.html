@@ -106,6 +106,7 @@
       <button id="endbtn" style="width:100%;background:#2a1f10;color:var(--gold);border:1px solid var(--gold);padding:16px;font-family:inherit;font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:6px">&#127937; END TONIGHT</button>
     </div>
     <div id="newnightbar" style="margin-top:16px;display:none">
+      <button id="showsummarybtn" style="width:100%;margin-bottom:10px;background:linear-gradient(180deg,#f4d788,#e9c46a);color:#111;border:0;padding:16px;font-family:inherit;font-size:14px;letter-spacing:2px;cursor:pointer;border-radius:6px;box-shadow:0 4px 0 #b8963f">&#9654; SHOW SUMMARY</button>
       <button id="newnightbtn" style="width:100%;background:var(--gold);color:#111;border:0;padding:18px;font-family:inherit;font-size:15px;letter-spacing:2px;cursor:pointer;border-radius:6px;box-shadow:0 4px 0 #b8963f">&#127916; NEW NIGHT</button>
     </div>
     <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(233,196,106,.18)">
@@ -157,6 +158,12 @@
     document.getElementById("newgame").onclick = createRoom;
     // po zakonczeniu wieczoru: swieza gra bez odswiezania strony
     document.getElementById("newnightbtn").onclick = resetGame;   // reset w miejscu (staly link); join.html sprawdza teraz czy druzyna istnieje
+    document.getElementById("showsummarybtn").onclick = async function(){
+      // sygnal do display: pokaz ekran podsumowania (reuzywamy reveal_step, zero nowej kolumny)
+      const btn = this, label = btn.textContent;
+      btn.disabled = true; btn.textContent = "ON THE BIG SCREEN";
+      await db.from("rooms").update({ reveal_step: 1 }).eq("id", roomId).eq("status", "ended");
+    };
     document.getElementById("startbtn").onclick = startGame;
 
     async function startGame(){
@@ -360,7 +367,7 @@
       if (!ok) return;
       const btn = document.getElementById("endbtn");
       btn.disabled = true; btn.textContent = "ENDING…";
-      const { error } = await db.from("rooms").update({ status: "ended" }).eq("id", roomId);
+      const { error } = await db.from("rooms").update({ status: "ended", reveal_step: 0 }).eq("id", roomId);
       if (error){ alert("End error: " + error.message); btn.disabled=false; btn.innerHTML="&#127937; END TONIGHT"; return; }
       // NIE kasujemy fl_host_room — inaczej po odswiezeniu host nie ma DO CZEGO wrocic
       // i traci NEW NIGHT (musialby zalozyc nowy pokoj = nowy kod, QR i link na TV).
@@ -608,6 +615,7 @@
       if (status === "ended"){
         ri.style.display = ""; ri.textContent = "\u{1F3C1} NIGHT ENDED \u00b7 OVERALL TABLE ON THE BIG SCREEN";
         if (nnb) nnb.style.display = "";     // wyjscie ze slepego zaulka — bez odswiezania strony
+        const ss = document.getElementById("showsummarybtn"); if (ss){ ss.disabled = false; ss.innerHTML = "\u25B6 SHOW SUMMARY"; }
         return;
       }
       if (status === "lobby"){
