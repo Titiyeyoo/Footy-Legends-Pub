@@ -404,6 +404,21 @@
   .sum-foot .cta { color:var(--gold); font-size:clamp(11px,1.9vh,16px); letter-spacing:4px; }
   .sum-foot .brand { color:var(--dim); font-size:clamp(10px,1.6vh,14px); letter-spacing:3px; margin-top:.7vh; }
   .sum-foot .brand b { color:var(--gold); font-weight:normal; }
+  /* ── ROUND WINNER beat (krotki tytul przed karta zwyciezcy rundy) ── */
+  #rwinner { display:none; position:fixed; inset:0; z-index:60; background:var(--bg); overflow:hidden; }
+  #rwinner .rw-flash { position:absolute; inset:0; background:radial-gradient(circle at 50% 45%, rgba(233,196,106,.18), transparent 60%); opacity:0; }
+  #rwinner .rw-beat { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:2.2vh; padding:0 4vw; }
+  #rwinner .rw-kick { color:var(--gold); font-size:clamp(13px,2.4vh,22px); letter-spacing:8px; opacity:0; }
+  #rwinner .rw-name { color:var(--gold); font-size:clamp(28px,8vh,76px); font-weight:bold; letter-spacing:3px; text-transform:uppercase; line-height:1.04; opacity:0; text-shadow:0 0 30px rgba(233,196,106,.55); max-width:90vw; overflow-wrap:break-word; }
+  #rwinner .rw-sweep { position:absolute; left:0; right:0; top:50%; height:2px; background:linear-gradient(90deg,transparent,var(--gold),transparent); opacity:0; transform:scaleX(0); }
+  #rwinner.play .rw-flash { animation:rwFlash 2.4s ease-out both; }
+  #rwinner.play .rw-kick  { animation:rwKick .5s ease-out .05s both; }
+  #rwinner.play .rw-name  { animation:rwName .55s cubic-bezier(.2,1.4,.3,1) .28s both; }
+  #rwinner.play .rw-sweep { animation:rwSweep .6s ease-out .30s both; }
+  @keyframes rwFlash { 0%{opacity:0} 18%{opacity:1} 55%{opacity:.5} 100%{opacity:0} }
+  @keyframes rwKick { from{opacity:0;transform:translateY(-14px);letter-spacing:16px} to{opacity:.9;transform:translateY(0);letter-spacing:8px} }
+  @keyframes rwName { from{opacity:0;transform:scale(.72)} to{opacity:1;transform:scale(1)} }
+  @keyframes rwSweep { 0%{opacity:0;transform:scaleX(0)} 40%{opacity:1} 100%{opacity:0;transform:scaleX(1)} }
 </style>
 </head>
 <body>
@@ -517,6 +532,8 @@
   </div>
 
   <div id="summary" style="display:none"></div>
+
+  <div id="rwinner"><div class="rw-flash"></div><div class="rw-sweep"></div><div class="rw-beat"><div class="rw-kick" id="rw-kick">ROUND WINNER</div><div class="rw-name" id="rw-name">&mdash;</div></div></div>
 
   <script src="qr.js"></script>   <!-- generator QR LOKALNIE (MIT, Kazuhiko Arase) -->
   <script src="supabase.js"></script>   <!-- Supabase LOKALNIE (MIT) — bez obcego CDN -->
@@ -1576,6 +1593,17 @@
 
     const REVEAL_GAP = 4500;       // pauza po planszy i miedzy nizszymi kartami (3./2.)
     const REVEAL_GAP_WIN = 6500;   // ZWYCIEZCA rundy zostaje dluzej (chwila chwaly przed tabela)
+    const RWIN_BEAT = 2200;        // krotki tytul "ROUND N WINNER" przed karta zwyciezcy
+    async function roundWinnerBeat(name, round){
+      const ov = el("rwinner"); if (!ov) return;
+      const k = el("rw-kick"), nm = el("rw-name");
+      if (k) k.textContent = "ROUND " + round + " WINNER";
+      if (nm) nm.textContent = name || "\u2014";
+      ov.style.display = "flex";
+      ov.classList.remove("play"); void ov.offsetWidth; ov.classList.add("play");   // restart animacji
+      await sleep(RWIN_BEAT);
+      ov.style.display = "none"; ov.classList.remove("play");
+    }
     async function runRevealAuto(room){
       const tag = "revealauto:" + room.current_round;
       if (mode === tag) return;                 // juz leci -> nie odpalaj drugi raz (guard re-entry z pollingu)
@@ -1589,7 +1617,13 @@
         const show = showCountFor(D.ranked.length);             // ile kart (TOP 3 albo mniej przy <=3)
         for (let s = 1; s <= show; s++){
           if (mode !== tag) return;
-          await sleep(REVEAL_GAP);
+          if (s === show){                                      // ostatnia karta = ZWYCIEZCA rundy
+            await sleep(900);                                   // krotka pauza po karcie nizszej
+            if (mode !== tag) return;
+            await roundWinnerBeat((D.ranked[0] || {}).name, room.current_round);   // krotki tytul ROUND N WINNER
+          } else {
+            await sleep(REVEAL_GAP);
+          }
           if (mode !== tag) return;
           await runCard(room, s);                               // 2) karta po karcie, od dolu w gore
         }
