@@ -380,6 +380,30 @@
   #standings.dense .lb-row.winner { padding:14px 18px; }
   #standings.dense .lb-row.winner .lb-name { font-size:16px; }
   #standings.dense .lb-row.winner .lb-score { font-size:15px; }
+  /* ── NIGHT SUMMARY (ekran po podium; host: SHOW SUMMARY -> reveal_step>=1) ── */
+  #summary { flex-direction:column; padding:2.4vh 3vw 1.8vh; height:100vh; }
+  .sum-kick { text-align:center; color:var(--dim); font-size:clamp(9px,1.5vh,12px); letter-spacing:5px; }
+  .sum-head { text-align:center; color:var(--gold); font-size:clamp(20px,3.4vh,34px); letter-spacing:6px; margin:.6vh 0 1.8vh; }
+  .sum-body { flex:1 1 auto; min-height:0; display:flex; gap:3vw; align-items:center; }
+  .sum-hero { flex:0 0 34%; display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .sum-hero svg { width:min(27vh,280px); height:auto; }
+  .sum-ck { color:var(--gold); font-size:clamp(10px,1.6vh,13px); letter-spacing:3px; margin-top:2.4vh; }
+  .sum-cn { color:var(--gold); font-size:clamp(20px,3.6vh,36px); font-weight:bold; letter-spacing:2px; text-transform:uppercase; line-height:1.05; margin:.6vh 0; text-shadow:0 0 20px rgba(233,196,106,.4); }
+  .sum-ct { color:#fff; font-size:clamp(12px,2vh,18px); letter-spacing:2px; }
+  .sum-cs { color:var(--dim); font-size:clamp(9px,1.4vh,12px); letter-spacing:1px; margin-top:.4vh; }
+  .sum-grid { flex:1 1 auto; display:grid; grid-template-columns:1fr 1fr; gap:1.4vh 1.4vw; align-content:center; }
+  .sum-tile { background:#0f1710; border:1px solid #1e3a1e; border-radius:12px; padding:1.8vh 1.6vw; }
+  .sum-tile .ic { font-size:clamp(15px,2.4vh,22px); }
+  .sum-tile .lab { color:var(--dim); font-size:clamp(9px,1.4vh,12px); letter-spacing:2px; margin:.5vh 0; }
+  .sum-tile .val { color:var(--gold); font-size:clamp(16px,2.6vh,24px); font-weight:bold; letter-spacing:1px; text-transform:uppercase; line-height:1.15; }
+  .sum-tile .sub { color:#cfc9ba; font-size:clamp(10px,1.5vh,13px); letter-spacing:1px; margin-top:.4vh; }
+  .sum-tile.legends { grid-column:1/-1; border-color:rgba(233,196,106,.5); background:linear-gradient(180deg,#141d13,#0f1710); text-align:center; }
+  .sum-tile.legends .big { color:var(--gold); font-size:clamp(24px,5vh,52px); font-weight:bold; letter-spacing:3px; }
+  .sum-tile.legends .hook { color:var(--green); font-size:clamp(11px,1.7vh,15px); letter-spacing:2px; margin-top:.5vh; }
+  .sum-foot { flex:0 0 auto; text-align:center; margin-top:1.4vh; }
+  .sum-foot .cta { color:var(--gold); font-size:clamp(11px,1.9vh,16px); letter-spacing:4px; }
+  .sum-foot .brand { color:var(--dim); font-size:clamp(10px,1.6vh,14px); letter-spacing:3px; margin-top:.7vh; }
+  .sum-foot .brand b { color:var(--gold); font-weight:normal; }
 </style>
 </head>
 <body>
@@ -491,6 +515,8 @@
     <div id="standings"></div>
     <div id="podium"></div>
   </div>
+
+  <div id="summary" style="display:none"></div>
 
   <script src="qr.js"></script>   <!-- generator QR LOKALNIE (MIT, Kazuhiko Arase) -->
   <script src="supabase.js"></script>   <!-- Supabase LOKALNIE (MIT) — bez obcego CDN -->
@@ -694,12 +720,12 @@
     }
 
     function showOnly(id){
-      ["connect","loading","lobby","drafting","board","roundview","tableview","reveal","breakview"].forEach(function(v){
+      ["connect","loading","lobby","drafting","board","roundview","tableview","reveal","breakview","summary"].forEach(function(v){
         const n = el(v); if (n) n.style.display = "none";
       });
       const n = el(id);
       // roundview/lobby/connect/loading = flex, reszta block. NIGDY "" — CSS ma display:none
-      if (n) n.style.display = (id === "lobby" || id === "connect" || id === "roundview" || id === "loading" || id === "breakview") ? "flex" : "block";
+      if (n) n.style.display = (id === "lobby" || id === "connect" || id === "roundview" || id === "loading" || id === "breakview" || id === "summary") ? "flex" : "block";
       document.body.classList.toggle("mode-tv", id !== "lobby" && id !== "connect");
       document.body.classList.toggle("lobby-fit", id === "lobby");
       // przycisk CHANGE ROOM widoczny TYLKO na ekranie laczenia (nie w trakcie gry — zeby nikt go nie kliknal przypadkiem i nie odpial TV od pokoju)
@@ -1150,7 +1176,11 @@
       const step = room.reveal_step || 0;
 
       if (room.status === "ended"){
-        if (mode !== "finale"){ mode = "finale"; runFinale(room); }
+        if ((room.reveal_step || 0) >= 1){
+          if (mode !== "summary"){ mode = "summary"; runSummary(room); }
+        } else {
+          if (mode !== "finale"){ mode = "finale"; runFinale(room); }
+        }
       } else if (room.status === "reveal"){
         runRevealAuto(room);   // ETAP A: display prowadzi caly reveal sam (guard mode===tag w srodku); ignoruje reveal_step
       } else if (room.status === "break"){
@@ -1875,6 +1905,95 @@
       kolumny[1].classList.add("in");
       await sleep(900);          // kolumna zwyciezcy wjechala (tranzycja .55s), wynik widoczny
       confettiBurst();           // -> konfetti FL (wolniejsze) i znika
+    }
+
+    // ── NIGHT SUMMARY: po podium (host klika SHOW SUMMARY -> reveal_step>=1) ──
+    const TOTAL_LEGENDS = 804;   // = db.js DB.length; aktualizowac razem z baza
+    async function runSummary(room){
+      busy = true;
+      try {
+        const { data: rounds } = await db.from("rounds").select("id,round_number").eq("room_id", roomId);
+        const roundIds = (rounds || []).map(function(r){ return r.id; });
+        const { data: entries } = await db.from("entries").select("round_id,team_id,score,xi").in("round_id", roundIds);
+        const { data: teams } = await db.from("teams").select("*").eq("room_id", roomId);
+        const playing = (teams || []).filter(function(t){ return t.role !== "spectator"; });
+        const nameById = {}; playing.forEach(function(t){ nameById[t.id] = t.name; });
+
+        const totals = {}, skladyD = {};
+        playing.forEach(function(t){ totals[t.id] = 0; skladyD[t.id] = []; });
+        const pCount = {}, pTeams = {}, uniq = new Set(), roundBest = {}, narr = new Set();
+        let xisBuilt = 0;
+
+        (entries || []).forEach(function(e){
+          if (totals[e.team_id] === undefined) return;
+          if (e.score != null){
+            totals[e.team_id] += e.score;
+            const rb = roundBest[e.round_id];
+            if (!rb || e.score > rb.score) roundBest[e.round_id] = { tid:e.team_id, score:e.score };
+          }
+          const xiSlots = e.xi && e.xi.slots ? e.xi.slots : (Array.isArray(e.xi) ? e.xi : null);
+          if (xiSlots){ const c = xiSlots.filter(function(p){ return p && p.n; }); if (c.length) skladyD[e.team_id].push(c); }
+          const names = xiNamesFromEntry(e);
+          if (names && names.length){
+            xisBuilt++;
+            names.forEach(function(nm){
+              uniq.add(nm);
+              pCount[nm] = (pCount[nm] || 0) + 1;
+              (pTeams[nm] = pTeams[nm] || new Set()).add(e.team_id);
+            });
+            try { const sb = window.flStoryBonus ? window.flStoryBonus(names) : null; if (sb && sb.name) narr.add(sb.name); } catch(err){}
+          }
+        });
+
+        const ranked = playing.map(function(t){ return { id:t.id, name:t.name, score:totals[t.id] }; })
+                              .sort(function(a,b){ return b.score - a.score; });
+        const winner = ranked[0] || { id:null, name:"\u2014" };
+
+        let favP = null, favN = 0;
+        for (const p in pCount){ if (pCount[p] > favN){ favN = pCount[p]; favP = p; } }
+        let deepP = null, deepT = null;
+        for (const p in pTeams){ if (pTeams[p].size === 1 && isDeepCutTV(p)){ deepP = p; deepT = nameById[Array.from(pTeams[p])[0]]; break; } }
+        const wc = {}; Object.keys(roundBest).forEach(function(rid){ const tid = roundBest[rid].tid; wc[tid] = (wc[tid] || 0) + 1; });
+        let mostTid = null, mostN = 0;
+        for (const tid in wc){ if (wc[tid] > mostN){ mostN = wc[tid]; mostTid = tid; } }
+        const showWins = mostTid && mostTid !== winner.id;
+
+        const found = uniq.size, left = Math.max(0, TOTAL_LEGENDS - found);
+
+        let champSvg = "", cType = "", cSub = "";
+        try {
+          const rundy = skladyD[winner.id] || [];
+          if (rundy.length){ const w = radarDruzyny(rundy); champSvg = w.svg; if (w.typ){ cType = w.typ.name || ""; const subs = (w.typ.subs && w.typ.subs.length) ? w.typ.subs : [w.typ.sub || ""]; cSub = subs[0] || ""; } }
+        } catch(err){ console.error("sum radar", err); }
+
+        function tile(ic, lab, val, sub){ return '<div class="sum-tile"><div class="ic">' + ic + '</div><div class="lab">' + lab + '</div><div class="val">' + val + '</div><div class="sub">' + sub + '</div></div>'; }
+        const tiles = [];
+        if (favP)     tiles.push(tile("\u26BD","ROOM FAVOURITE", safe(favP), "in " + favN + " / " + xisBuilt + " XIs"));
+        if (deepP)    tiles.push(tile("\u{1F573}\uFE0F","DEEP CUT OF THE NIGHT", safe(deepP), "only " + safe(deepT) + " fielded them"));
+        if (showWins) tiles.push(tile("\u{1F451}","MOST ROUND WINS", safe(nameById[mostTid]), mostN + " round" + (mostN===1?"":"s") + " won"));
+        tiles.push(tile("\u{1F3D7}\uFE0F","XIs BUILT", xisBuilt, "squads built tonight"));
+        tiles.push(tile("\u{1F4D6}","STORIES UNCOVERED", narr.size, "different narratives found"));
+        tiles.push(tile("\u23F1\uFE0F","ROUNDS PLAYED", roundIds.length, "tonight"));
+        const four = tiles.slice(0, 4).join("");
+
+        el("summary").innerHTML =
+            '<div class="sum-kick">XI AFTER DARK \u00b7 TONIGHT</div>'
+          + '<div class="sum-head">THE NIGHT IN NUMBERS</div>'
+          + '<div class="sum-body">'
+          +   '<div class="sum-hero"><div>' + champSvg + '</div>'
+          +     '<div class="sum-ck">\u{1F3C6} CHAMPIONS OF THE NIGHT</div>'
+          +     '<div class="sum-cn">' + safe(winner.name) + '</div>'
+          +     (cType ? '<div class="sum-ct">' + safe(cType) + '</div><div class="sum-cs">' + safe(cSub) + '</div>' : '')
+          +   '</div>'
+          +   '<div class="sum-grid">' + four
+          +     '<div class="sum-tile legends"><div class="lab">LEGENDS FIELDED TONIGHT</div><div class="big">' + found + ' / ' + TOTAL_LEGENDS + '</div><div class="hook">' + left + ' still out there \u2014 come back for them</div></div>'
+          +   '</div>'
+          + '</div>'
+          + '<div class="sum-foot"><div class="cta">SAME PITCH \u00b7 DIFFERENT GAME</div>'
+          +   '<div class="brand">\u{1F319} <b>XI AFTER DARK</b> \u00b7 elevenafterdark.com \u00b7 ' + left + ' legends still waiting</div></div>';
+        showOnly("summary");
+      } catch(e){ console.error("runSummary", e); }
+      busy = false;
     }
 
     async function runFinale(room){
