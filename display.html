@@ -1621,9 +1621,9 @@
       busy = false;
     }
 
-    const REVEAL_GAP = 4500;       // pauza po planszy i miedzy nizszymi kartami (3./2.)
-    const REVEAL_GAP_WIN = 6500;   // ZWYCIEZCA rundy zostaje dluzej (chwila chwaly przed tabela)
-    const RWIN_BEAT = 2200;        // krotki tytul "ROUND N WINNER" przed karta zwyciezcy
+    const REVEAL_GAP = 4500;       // pauza po planszy i miedzy kartami (3./2./zwyciezca)
+    const REVEAL_GAP_WIN = 3800;   // karta zwyciezcy zostaje (podziwiamy XI), potem BIT konczy runde
+    const RWIN_BEAT = 2200;        // blysk "ROUND N WINNER" — KONCZY runde (po karcie zwyciezcy)
     async function roundWinnerBeat(name, round){
       const ov = el("rwinner"); if (!ov) return;
       const k = el("rw-kick"), nm = el("rw-name");
@@ -1647,18 +1647,14 @@
         const show = showCountFor(D.ranked.length);             // ile kart (TOP 3 albo mniej przy <=3)
         for (let s = 1; s <= show; s++){
           if (mode !== tag) return;
-          if (s === show){                                      // ostatnia karta = ZWYCIEZCA rundy
-            await sleep(900);                                   // krotka pauza po karcie nizszej
-            if (mode !== tag) return;
-            await roundWinnerBeat((D.ranked[0] || {}).name, room.current_round);   // krotki tytul ROUND N WINNER
-          } else {
-            await sleep(REVEAL_GAP);
-          }
+          await sleep(REVEAL_GAP);
           if (mode !== tag) return;
-          await runCard(room, s);                               // 2) karta po karcie, od dolu w gore
+          await runCard(room, s);                               // 2) karta po karcie, od dolu w gore (zwyciezca ostatni)
         }
         if (mode !== tag) return;
-        await sleep(REVEAL_GAP_WIN);   // zwyciezca rundy zostaje dluzej przed tabela
+        await sleep(REVEAL_GAP_WIN);   // karta zwyciezcy zostaje (podziwiamy XI)
+        if (mode !== tag) return;
+        await roundWinnerBeat((D.ranked[0] || {}).name, room.current_round);   // BIT KONCZY RUNDE (po zwyciezcy, przed tabela)
         if (mode !== tag) return;
         // MOST (set-and-forget): domkniecie fazy, ktora display WLASNIE odegral — nie sterowanie gra.
         // Zapis WARUNKOWY: przechodzi tylko gdy pokoj wciaz jest w "reveal" -> drugi TV / odswiezenie
