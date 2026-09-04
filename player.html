@@ -448,6 +448,7 @@
     document.getElementById("xad-draft").style.display = "none";
     document.getElementById("fld-locked").style.display = "";
     try { new Audio("sfx-lock.mp3").play().catch(function(){}); } catch(e){}   // miekki confirm (swiezy lock)
+    try { if (navigator.vibrate) navigator.vibrate(40); } catch(e){}           // wibracja "zapisane" (Android; iPhone jej nie ma)
     try { window.scrollTo(0,0); } catch(e){}
     // serwer: pula (POOL) + sklad (11) + wynik + status + czas — przez funkcje z tokenem (RLS)
     if (state && roundId && TEAM_ID){
