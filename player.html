@@ -447,6 +447,7 @@
     locked = true;     // ten telefon zalockowal — reveal ma go zostawic na "XI LOCKED"
     document.getElementById("xad-draft").style.display = "none";
     document.getElementById("fld-locked").style.display = "";
+    try { new Audio("sfx-lock.mp3").play().catch(function(){}); } catch(e){}   // miekki confirm (swiezy lock)
     try { window.scrollTo(0,0); } catch(e){}
     // serwer: pula (POOL) + sklad (11) + wynik + status + czas — przez funkcje z tokenem (RLS)
     if (state && roundId && TEAM_ID){
