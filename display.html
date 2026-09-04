@@ -539,7 +539,7 @@
 
   <div id="rwinner"><div class="rw-flash"></div><div class="rw-sweep"></div><div class="rw-beat"><div class="rw-kick" id="rw-kick">ROUND WINNER</div><div class="rw-name" id="rw-name">&mdash;</div></div></div>
 
-  <div id="audiolock" onclick="unlockAudio()">&#128266; kliknij, by włączyć dźwięk</div>
+  <div id="audiolock" onclick="unlockAudio()">&#128266; TAP TO ENABLE SOUND</div>
 
   <script src="qr.js"></script>   <!-- generator QR LOKALNIE (MIT, Kazuhiko Arase) -->
   <script src="supabase.js"></script>   <!-- Supabase LOKALNIE (MIT) — bez obcego CDN -->
@@ -573,7 +573,9 @@
       Object.keys(SFX).forEach(function(n){ const a = SFX[n]; try { const p = a.play(); if (p && p.then) p.then(function(){ a.pause(); a.currentTime = 0; }).catch(function(){}); } catch(e){} });
       const lk = document.getElementById("audiolock"); if (lk) lk.style.display = "none";
     }
-    document.addEventListener("click", unlockAudio, { once:true });   // pierwszy klik w okno TV odblokowuje
+    ["pointerdown","touchend","click"].forEach(function(ev){
+      document.addEventListener(ev, unlockAudio);   // dowolne dotkniecie/klik odblokowuje (guard w srodku)
+    });
     function el(id){ return document.getElementById(id); }
 
     let code = (qp("room") || "").toUpperCase();
