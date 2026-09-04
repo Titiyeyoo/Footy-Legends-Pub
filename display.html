@@ -419,6 +419,10 @@
   @keyframes rwKick { from{opacity:0;transform:translateY(-14px);letter-spacing:16px} to{opacity:.9;transform:translateY(0);letter-spacing:8px} }
   @keyframes rwName { from{opacity:0;transform:scale(.72)} to{opacity:1;transform:scale(1)} }
   @keyframes rwSweep { 0%{opacity:0;transform:scaleX(0)} 40%{opacity:1} 100%{opacity:0;transform:scaleX(1)} }
+  #audiolock { position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:80; cursor:pointer;
+    background:rgba(15,23,16,.92); color:var(--gold); border:1px solid var(--gold); border-radius:20px;
+    padding:8px 18px; font-size:13px; letter-spacing:2px; box-shadow:0 0 18px rgba(0,0,0,.5); animation:alkPulse 2.2s ease-in-out infinite; }
+  @keyframes alkPulse { 0%,100%{opacity:.7} 50%{opacity:1} }
 </style>
 </head>
 <body>
@@ -535,6 +539,8 @@
 
   <div id="rwinner"><div class="rw-flash"></div><div class="rw-sweep"></div><div class="rw-beat"><div class="rw-kick" id="rw-kick">ROUND WINNER</div><div class="rw-name" id="rw-name">&mdash;</div></div></div>
 
+  <div id="audiolock" onclick="unlockAudio()">&#128266; kliknij, by włączyć dźwięk</div>
+
   <script src="qr.js"></script>   <!-- generator QR LOKALNIE (MIT, Kazuhiko Arase) -->
   <script src="supabase.js"></script>   <!-- Supabase LOKALNIE (MIT) — bez obcego CDN -->
   <!-- Silnik narracji: window.flStoryBonus (W2). Bez tego BASE TABLE ma story=0 i STORY FOUND nigdy nie wjeżdża. -->
@@ -549,6 +555,25 @@
     function baseUrl(){ return location.origin + location.pathname.replace(/\/[^\/]*$/, ""); }
     function safe(t){ const d=document.createElement("div"); d.textContent = t==null ? "" : String(t); return d.innerHTML; }
     function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+    // ── AUDIO: krotkie SFX na TV. Przegladarka gra dopiero po 1. kliknieciu w to okno. ──
+    const SFX = {};
+    ["story","shift","start","final"].forEach(function(n){
+      try { const a = new Audio("sfx-" + n + ".mp3"); a.preload = "auto"; a.volume = 0.9; SFX[n] = a; } catch(e){}
+    });
+    let audioReady = false;
+    function playSfx(name){
+      if (!audioReady) return;
+      const a = SFX[name]; if (!a) return;
+      try { a.currentTime = 0; const p = a.play(); if (p && p.catch) p.catch(function(){}); } catch(e){}
+    }
+    function unlockAudio(){
+      if (audioReady) return;
+      audioReady = true;
+      Object.keys(SFX).forEach(function(n){ const a = SFX[n]; try { const p = a.play(); if (p && p.then) p.then(function(){ a.pause(); a.currentTime = 0; }).catch(function(){}); } catch(e){} });
+      const lk = document.getElementById("audiolock"); if (lk) lk.style.display = "none";
+    }
+    document.addEventListener("click", unlockAudio, { once:true });   // pierwszy klik w okno TV odblokowuje
     function el(id){ return document.getElementById(id); }
 
     let code = (qp("room") || "").toUpperCase();
@@ -1213,7 +1238,10 @@
       } else if (room.status === "playing"){
         const rl = el("ready-line"); if (rl) rl.style.display = "none";   // poza tabela licznik znika
         const want = "drafting:" + room.current_round;
-        if (mode !== want){ mode = want; runDrafting(room); }
+        if (mode !== want){
+          if (room.current_round === 1) playSfx("start");   // kickoff — raz, na starcie nocy
+          mode = want; runDrafting(room);
+        }
         else { refreshDrafting(room); }   // to samo mode -> tylko odswiez ptaszki
       }
     }
@@ -1561,7 +1589,8 @@
               t.cur = t.base + (t.story || 0);
               if (t._storyEl){ t._storyEl.style.display = "block"; t._storyEl.innerHTML = "&#9733; " + safe(t.storyName || "STORY"); }
             });
-            placeAll(true);
+            playSfx("story");           // znaleziono historie (raz na pakiet)
+            placeAll(true); playSfx("shift");   // przetasowanie
             await sleep(2000);   // jeden ruch (przejazd 1.5s) + chwila
           }
 
@@ -1571,9 +1600,10 @@
             t._el.style.boxShadow = "0 0 0 2px #e9c46a, 0 0 22px rgba(233,196,106,.6)";
             t._el.style.background = "rgba(233,196,106,.16)";
             if (t._storyEl){ t._storyEl.style.display = "block"; t._storyEl.innerHTML = "&#9733; " + safe(t.storyName || "STORY"); }
+            playSfx("story");           // narracja tej druzyny
             await sleep(900);
             t.cur = t.base + (t.story || 0);
-            placeAll(true);
+            placeAll(true); playSfx("shift");   // wjazd na wyzsza pozycje
             await sleep(2400);   // przejazd 1.5s + niech sala zobaczy wjazd
             t._el.style.boxShadow = "";
             t._el.style.background = "rgba(15,23,16,.85)";
@@ -2044,6 +2074,7 @@
 
     async function runFinale(room, opts){
       const instant = !!(opts && opts.instant);
+      if (!instant) playSfx("final");   // gwizdek konca meczu — tylko przy animowanym finale, nie przy toggle radarow
       busy = true;
       try {
         const { data: rounds, error: rErr } = await db.from("rounds").select("id,round_number").eq("room_id", roomId);
