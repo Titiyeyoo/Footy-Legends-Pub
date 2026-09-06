@@ -419,10 +419,12 @@
   @keyframes rwKick { from{opacity:0;transform:translateY(-14px);letter-spacing:16px} to{opacity:.9;transform:translateY(0);letter-spacing:8px} }
   @keyframes rwName { from{opacity:0;transform:scale(.72)} to{opacity:1;transform:scale(1)} }
   @keyframes rwSweep { 0%{opacity:0;transform:scaleX(0)} 40%{opacity:1} 100%{opacity:0;transform:scaleX(1)} }
-  #audiolock { position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:80; cursor:pointer;
-    background:rgba(15,23,16,.92); color:var(--gold); border:1px solid var(--gold); border-radius:20px;
-    padding:8px 18px; font-size:13px; letter-spacing:2px; box-shadow:0 0 18px rgba(0,0,0,.5); animation:alkPulse 2.2s ease-in-out infinite; }
-  @keyframes alkPulse { 0%,100%{opacity:.7} 50%{opacity:1} }
+  #audiolock { position:fixed; inset:0; z-index:90; background:var(--bg); cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2.4vh; text-align:center; }
+  #audiolock .al-brand { color:var(--dim); font-size:clamp(11px,2vh,16px); letter-spacing:6px; }
+  #audiolock .al-big { color:var(--gold); font-size:clamp(24px,6vh,52px); letter-spacing:5px; animation:alkPulse 2s ease-in-out infinite; }
+  #audiolock .al-small { color:var(--dim); font-size:clamp(11px,1.8vh,15px); letter-spacing:2px; }
+  @keyframes alkPulse { 0%,100%{opacity:.65} 50%{opacity:1} }
 </style>
 </head>
 <body>
@@ -475,7 +477,6 @@
   </div>
 
   <!-- BUDOWANIE SKLADOW (status=playing): kto juz zalockowal -->
-  <div id="sound-hint" class="sound-hint">&#128266; tap anywhere to enable sound</div>
   <div id="drafting">
     <div class="dr-title" id="dr-title">ROUND 1 · BUILDING XI</div>
     <div class="dr-sub" id="dr-sub">30 legends each · pick your 11 · lock it in</div>
@@ -539,7 +540,11 @@
 
   <div id="rwinner"><div class="rw-flash"></div><div class="rw-sweep"></div><div class="rw-beat"><div class="rw-kick" id="rw-kick">ROUND WINNER</div><div class="rw-name" id="rw-name">&mdash;</div></div></div>
 
-  <div id="audiolock" onclick="unlockAudio()">&#128266; TAP TO ENABLE SOUND</div>
+  <div id="audiolock" onclick="unlockAudio()">
+    <div class="al-brand">XI AFTER DARK</div>
+    <div class="al-big">&#9654; CLICK TO START</div>
+    <div class="al-small">&#128266; one click enables sound on this screen</div>
+  </div>
 
   <script src="qr.js"></script>   <!-- generator QR LOKALNIE (MIT, Kazuhiko Arase) -->
   <script src="supabase.js"></script>   <!-- Supabase LOKALNIE (MIT) — bez obcego CDN -->
@@ -570,11 +575,13 @@
     function unlockAudio(){
       if (audioReady) return;
       audioReady = true;
+      try { ensureAudio(); } catch(e){}   // Web Audio (beepy timera draftu)
       Object.keys(SFX).forEach(function(n){ const a = SFX[n]; try { const p = a.play(); if (p && p.then) p.then(function(){ a.pause(); a.currentTime = 0; }).catch(function(){}); } catch(e){} });
       const lk = document.getElementById("audiolock"); if (lk) lk.style.display = "none";
+      const h = document.getElementById("sound-hint"); if (h) h.style.display = "none";
     }
-    ["pointerdown","touchend","click"].forEach(function(ev){
-      document.addEventListener(ev, unlockAudio);   // dowolne dotkniecie/klik odblokowuje (guard w srodku)
+    ["pointerdown","touchend","click","keydown"].forEach(function(ev){
+      document.addEventListener(ev, unlockAudio);   // dowolne dotkniecie/klik/klawisz odblokowuje (guard w srodku)
     });
     function el(id){ return document.getElementById(id); }
 
@@ -598,18 +605,18 @@
       try {
         const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.type = "square"; osc.frequency.value = freq;
-        gain.gain.setValueAtTime(vol || 0.08, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (dur || 0.08));
-        osc.start(audioCtx.currentTime); osc.stop(audioCtx.currentTime + (dur || 0.08));
+        osc.type = "triangle"; osc.frequency.value = freq;   // miekko, nie square/BIOS
+        const t0 = audioCtx.currentTime;
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(vol || 0.08, t0 + 0.012);   // miekki atak = brak klika
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + (dur || 0.08));
+        osc.start(t0); osc.stop(t0 + (dur || 0.08));
       } catch(e){}
     }
     function soundStart(){ tone(660,0.12,0.09); setTimeout(function(){ tone(990,0.16,0.09); }, 130); }  // zegar wystartowal (dwuton w gore)
     function soundBeep(sec){ tone(sec<=5 ? 880 : 660, 0.08, 0.08); }                                    // pikanie ostatnich 10s (ostrzej pod 5s)
     function soundEnd(){ tone(440,0.30,0.10); }                                                          // koniec czasu
-    // odblokowanie audio: przegladarka wymaga gestu — pierwszy klik/dotyk/klawisz na TV wlacza dzwiek
-    function unlockAudio(){ ensureAudio(); const h = document.getElementById("sound-hint"); if (h) h.style.display = "none"; }
-    ["click","touchstart","keydown"].forEach(function(ev){ document.addEventListener(ev, unlockAudio, { once:true }); });
+    // (odblokowanie audio scalone wyzej: ensureAudio + priming SFX + chowanie promptu)
 
     function tickDraftTimer(){
       const box = document.getElementById("dr-timer");
