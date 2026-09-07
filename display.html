@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>XI After Dark — Big Screen</title>
+<title>11 After Dark — Big Screen</title>
 <link rel="stylesheet" href="fonts.css">   <!-- czcionka LOKALNIE (OFL) -->
 <style>
   /* ── JEDEN font w calym pub: Press Start 2P, jak w solo (styles.css: html,body{font-family:var(--px)}) ── */
@@ -435,7 +435,7 @@
 
   <!-- EKRAN WPISANIA KODU (gdy brak ?room= albo pokoj nie istnieje / zakonczony) -->
   <div id="connect" style="display:none;flex-direction:column;align-items:center;width:100%;max-width:520px;text-align:center">
-    <h1>XI AFTER DARK</h1>
+    <h1>11 AFTER DARK</h1>
     <div class="scan" style="margin:22px 0 12px">ENTER GAME CODE FROM THE HOST</div>
     <input id="cc-code" maxlength="4" placeholder="ABCD" autocomplete="off" autocapitalize="characters"
            style="width:220px;text-align:center;text-transform:uppercase;letter-spacing:14px;font-family:var(--px);font-size:34px;padding:18px 10px;background:#0d160d;border:2px solid #2a4;color:var(--gold);border-radius:10px;box-sizing:border-box">
@@ -455,9 +455,9 @@
   <!-- LOBBY -->
   <div id="lobby">
     <div class="lb-left">
-      <img id="lobby-logo" src="xad-logo.png" alt="XI After Dark"
+      <img id="lobby-logo" src="xad-logo.png" alt="11 After Dark"
            onerror="this.style.display='none';var h=document.getElementById('lobby-name');if(h)h.style.display='block'">
-      <div id="lobby-name" class="lb-name">XI AFTER DARK</div>
+      <div id="lobby-name" class="lb-name">11 AFTER DARK</div>
       <div class="lb-tag1">BUILD YOUR XI</div>
       <div class="lb-tag2">THE BEST STORY WINS</div>
       <div class="lb-join">JOIN AT</div>
@@ -541,7 +541,7 @@
   <div id="rwinner"><div class="rw-flash"></div><div class="rw-sweep"></div><div class="rw-beat"><div class="rw-kick" id="rw-kick">ROUND WINNER</div><div class="rw-name" id="rw-name">&mdash;</div></div></div>
 
   <div id="audiolock" onclick="unlockAudio()">
-    <div class="al-brand">XI AFTER DARK</div>
+    <div class="al-brand">11 AFTER DARK</div>
     <div class="al-big">&#9654; CLICK TO START</div>
     <div class="al-small">&#128266; one click enables sound on this screen</div>
   </div>
@@ -777,6 +777,7 @@
       const n = el(id);
       // roundview/lobby/connect/loading = flex, reszta block. NIGDY "" — CSS ma display:none
       if (n) n.style.display = (id === "lobby" || id === "connect" || id === "roundview" || id === "loading" || id === "breakview" || id === "summary") ? "flex" : "block";
+      const rw = el("rwinner"); if (rw) rw.style.display = "none";   // przelaczenie ekranu chowa zaslone bitu (bit -> tabela bez przeblysku boiska)
       document.body.classList.toggle("mode-tv", id !== "lobby" && id !== "connect");
       document.body.classList.toggle("lobby-fit", id === "lobby");
       // przycisk CHANGE ROOM widoczny TYLKO na ekranie laczenia (nie w trakcie gry — zeby nikt go nie kliknal przypadkiem i nie odpial TV od pokoju)
@@ -1641,7 +1642,7 @@
       ov.style.display = "flex";
       ov.classList.remove("play"); void ov.offsetWidth; ov.classList.add("play");   // restart animacji
       await sleep(RWIN_BEAT);
-      ov.style.display = "none"; ov.classList.remove("play");
+      // zaslona ZOSTAJE — schowa ja showOnly przy przelaczeniu na tabele (brak przeblysku karty zwyciezcy)
     }
     async function runRevealAuto(room){
       const tag = "revealauto:" + room.current_round;
@@ -2057,7 +2058,7 @@
         const four = tiles.slice(0, 4).join("");
 
         el("summary").innerHTML =
-            '<div class="sum-kick">XI AFTER DARK \u00b7 TONIGHT</div>'
+            '<div class="sum-kick">11 AFTER DARK \u00b7 TONIGHT</div>'
           + '<div class="sum-head">THE NIGHT IN NUMBERS</div>'
           + '<div class="sum-body">'
           +   '<div class="sum-hero"><div>' + champSvg + '</div>'
@@ -2070,7 +2071,7 @@
           +   '</div>'
           + '</div>'
           + '<div class="sum-foot"><div class="cta">SAME PITCH \u00b7 DIFFERENT GAME</div>'
-          +   '<div class="brand">\u{1F319} <b>XI AFTER DARK</b> \u00b7 elevenafterdark.com \u00b7 ' + left + ' legends still waiting</div></div>';
+          +   '<div class="brand">\u{1F319} <b>11 AFTER DARK</b> \u00b7 elevenafterdark.com</div></div>';
         showOnly("summary");
         const jcS = el("joincorner"); if (jcS) jcS.style.display = "none";
       } catch(e){ console.error("runSummary", e); }
