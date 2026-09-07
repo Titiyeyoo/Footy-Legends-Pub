@@ -419,11 +419,10 @@
   @keyframes rwKick { from{opacity:0;transform:translateY(-14px);letter-spacing:16px} to{opacity:.9;transform:translateY(0);letter-spacing:8px} }
   @keyframes rwName { from{opacity:0;transform:scale(.72)} to{opacity:1;transform:scale(1)} }
   @keyframes rwSweep { 0%{opacity:0;transform:scaleX(0)} 40%{opacity:1} 100%{opacity:0;transform:scaleX(1)} }
-  #audiolock { position:fixed; inset:0; z-index:90; background:var(--bg); cursor:pointer;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2.4vh; text-align:center; }
-  #audiolock .al-brand { color:var(--dim); font-size:clamp(11px,2vh,16px); letter-spacing:6px; }
-  #audiolock .al-big { color:var(--gold); font-size:clamp(24px,6vh,52px); letter-spacing:5px; animation:alkPulse 2s ease-in-out infinite; }
-  #audiolock .al-small { color:var(--dim); font-size:clamp(11px,1.8vh,15px); letter-spacing:2px; }
+  #audiolock { position:fixed; top:14px; right:16px; z-index:90; cursor:pointer;
+    width:44px; height:44px; display:flex; align-items:center; justify-content:center;
+    font-size:20px; color:var(--gold); background:rgba(15,23,16,.85); border:1px solid var(--gold);
+    border-radius:50%; box-shadow:0 0 14px rgba(0,0,0,.5); animation:alkPulse 2.2s ease-in-out infinite; }
   @keyframes alkPulse { 0%,100%{opacity:.65} 50%{opacity:1} }
 </style>
 </head>
@@ -540,11 +539,7 @@
 
   <div id="rwinner"><div class="rw-flash"></div><div class="rw-sweep"></div><div class="rw-beat"><div class="rw-kick" id="rw-kick">ROUND WINNER</div><div class="rw-name" id="rw-name">&mdash;</div></div></div>
 
-  <div id="audiolock" onclick="unlockAudio()">
-    <div class="al-brand">11 AFTER DARK</div>
-    <div class="al-big">&#9654; CLICK TO START</div>
-    <div class="al-small">&#128266; one click enables sound on this screen</div>
-  </div>
+  <div id="audiolock" onclick="unlockAudio()" title="Enable sound">&#128263;</div>
 
   <script src="qr.js"></script>   <!-- generator QR LOKALNIE (MIT, Kazuhiko Arase) -->
   <script src="supabase.js"></script>   <!-- Supabase LOKALNIE (MIT) — bez obcego CDN -->
@@ -580,9 +575,7 @@
       const lk = document.getElementById("audiolock"); if (lk) lk.style.display = "none";
       const h = document.getElementById("sound-hint"); if (h) h.style.display = "none";
     }
-    ["pointerdown","touchend","click","keydown"].forEach(function(ev){
-      document.addEventListener(ev, unlockAudio);   // dowolne dotkniecie/klik/klawisz odblokowuje (guard w srodku)
-    });
+    // odblokowanie WYLACZNIE przez klik w ikone (#audiolock onclick) — bez globalnego listenera na oknie
     function el(id){ return document.getElementById(id); }
 
     let code = (qp("room") || "").toUpperCase();
@@ -1600,7 +1593,8 @@
               if (t._storyEl){ t._storyEl.style.display = "block"; t._storyEl.innerHTML = "&#9733; " + safe(t.storyName || "STORY"); }
             });
             playSfx("story");           // znaleziono historie (raz na pakiet)
-            placeAll(true); playSfx("shift");   // przetasowanie
+            await sleep(500);           // odstep, zeby story i shift sie nie nakladaly
+            placeAll(true); playSfx("shift");   // dopiero teraz przetasowanie + jego dzwiek
             await sleep(2000);   // jeden ruch (przejazd 1.5s) + chwila
           }
 
@@ -1633,7 +1627,7 @@
 
     const REVEAL_GAP = 4500;       // pauza po planszy i miedzy kartami (3./2./zwyciezca)
     const REVEAL_GAP_WIN = 3800;   // karta zwyciezcy zostaje (podziwiamy XI), potem BIT konczy runde
-    const RWIN_BEAT = 2200;        // blysk "ROUND N WINNER" — KONCZY runde (po karcie zwyciezcy)
+    const RWIN_BEAT = 2500;        // blysk "ROUND N WINNER" — KONCZY runde (po karcie zwyciezcy)
     async function roundWinnerBeat(name, round){
       const ov = el("rwinner"); if (!ov) return;
       const k = el("rw-kick"), nm = el("rw-name");
@@ -2058,11 +2052,11 @@
         const four = tiles.slice(0, 4).join("");
 
         el("summary").innerHTML =
-            '<div class="sum-kick">11 AFTER DARK \u00b7 TONIGHT</div>'
+            '<div class="sum-kick">TONIGHT</div>'
           + '<div class="sum-head">THE NIGHT IN NUMBERS</div>'
           + '<div class="sum-body">'
           +   '<div class="sum-hero"><div>' + champSvg + '</div>'
-          +     '<div class="sum-ck">\u{1F3C6} CHAMPIONS OF THE NIGHT</div>'
+          +     '<div class="sum-ck">\u{1F3C6} CHAMPION OF THE NIGHT</div>'
           +     '<div class="sum-cn">' + safe(winner.name) + '</div>'
           +     (cType ? '<div class="sum-ct">' + safe(cType) + '</div><div class="sum-cs">' + safe(cSub) + '</div>' : '')
           +   '</div>'
@@ -2110,7 +2104,7 @@
         const jcF = el("joincorner"); if (jcF) jcF.style.display = "none";   // koniec nocy — QR niepotrzebny
         el("rv-title").textContent = "FINAL STANDINGS";
         el("rv-sub").textContent   = roundIds.length + " ROUND" + (roundIds.length===1?"":"S") + " \u00b7 TONIGHT'S TOTAL";
-        el("rv-crown").innerHTML   = "\u{1F3C6} CHAMPIONS OF THE NIGHT \u{1F3C6}";
+        el("rv-crown").innerHTML   = "\u{1F3C6} CHAMPION OF THE NIGHT \u{1F3C6}";
         el("rv-crown").classList.remove("shown");
         const wrap = el("standings");
         wrap.innerHTML = ""; wrap.className = ranked.length > 6 ? "dense" : "";
