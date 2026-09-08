@@ -454,7 +454,7 @@
   <!-- LOBBY -->
   <div id="lobby">
     <div class="lb-left">
-      <img id="lobby-logo" src="xad-logo.png?v=2" alt="11 After Dark"
+      <img id="lobby-logo" src="xad-logo-glow.png" alt="11 After Dark"
            onerror="this.style.display='none';var h=document.getElementById('lobby-name');if(h)h.style.display='block'">
       <div id="lobby-name" class="lb-name">11 AFTER DARK</div>
       <div class="lb-tag1">BUILD YOUR XI</div>
@@ -1593,8 +1593,9 @@
               t.cur = t.base + (t.story || 0);
               if (t._storyEl){ t._storyEl.style.display = "block"; t._storyEl.innerHTML = "&#9733; " + safe(t.storyName || "STORY"); }
             });
-            playSfx("story");           // znaleziono historie (raz na pakiet) — JEDYNY dzwiek (koniec podwojnego)
-            placeAll(true);             // przetasowanie ciche — story juz je "opowiedzialo"
+            playSfx("story");           // znaleziono historie (raz na pakiet)
+            await sleep(900);           // odstep JAK W BEATACH — story wybrzmiewa, dopiero potem harfa (zero nakladania)
+            placeAll(true); playSfx("shift");   // bulk reshuffle (pierwszy znalazca wskakuje nad baze) + harfa
             await sleep(2000);   // jeden ruch (przejazd 1.5s) + chwila
           }
 
@@ -1607,7 +1608,7 @@
             playSfx("story");           // narracja tej druzyny
             await sleep(900);
             t.cur = t.base + (t.story || 0);
-            placeAll(true);   // wjazd ciche — story tej druzyny juz zabrzmialo
+            placeAll(true); playSfx("shift");   // wjazd na wyzsza pozycje + harfa
             await sleep(2400);   // przejazd 1.5s + niech sala zobaczy wjazd
             t._el.style.boxShadow = "";
             t._el.style.background = "rgba(15,23,16,.85)";
