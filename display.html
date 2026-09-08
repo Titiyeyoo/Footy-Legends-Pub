@@ -1228,6 +1228,7 @@
         } else if (rs === 1){
           if (mode !== "summary"){ mode = "summary"; runSummary(room); }
         } else {
+          if (String(mode).indexOf("revealauto:") === 0) return;   // END w trakcie revealu -> NIE przerywaj; niech runda dokonczy sie sama, finale PO niej
           if (mode !== "finale"){ mode = "finale"; runFinale(room); }
         }
       } else if (room.status === "reveal"){
@@ -1243,7 +1244,7 @@
         const rl = el("ready-line"); if (rl) rl.style.display = "none";   // poza tabela licznik znika
         const want = "drafting:" + room.current_round;
         if (mode !== want){
-          if (room.current_round === 1) playSfx("start");   // kickoff — raz, na starcie nocy
+          // (gwizdek startu usuniety — synteza za slaba; wroci gdy bedzie prawdziwy gwizdek CC0)
           mode = want; runDrafting(room);
         }
         else { refreshDrafting(room); }   // to samo mode -> tylko odswiez ptaszki
@@ -1677,8 +1678,16 @@
         } catch(e){ console.error("AUTO-TABLE:", e); }
         // Znacznik przestawiamy TYLKO po POTWIERDZONYM zapisie — inaczej zostaje "revealauto:R",
         // dzieki czemu router NIE odtwarza revealu od nowa (to powodowalo blysk paska COMPILING).
-        if (switched) mode = "table:" + room.current_round;
-        runTitlesTable(room);                                   // 3) auto-przejscie do tabeli
+        if (switched){
+          mode = "table:" + room.current_round;
+          runTitlesTable(room);                                 // 3) normalne auto-przejscie do tabeli
+        } else {
+          // status nie jest juz "reveal" — czy host zakonczyl noc W TRAKCIE revealu?
+          let ended = false;
+          try { const { data: rr } = await db.from("rooms").select("status").eq("id", roomId).maybeSingle(); ended = !!(rr && rr.status === "ended"); } catch(e){}
+          if (ended){ mode = "finale"; runFinale(room); }        // END wcisniety w trakcie -> finale DOPIERO po pelnej rundzie (runda idzie do konca)
+          else { runTitlesTable(room); }                         // inny przypadek (drugi TV / odswiezenie)
+        }
         // mode ZOSTAJE = tag: tabela stoi, router nie odpala revealu drugi raz;
         // wyjscie nastepuje gdy host klika NEXT ROUND (status->playing, nowa runda)
       } catch(err){ rvError("REVEAL AUTO ERROR: " + (err.message||err)); console.error(err); }
@@ -2074,7 +2083,7 @@
 
     async function runFinale(room, opts){
       const instant = !!(opts && opts.instant);
-      if (!instant) playSfx("final");   // gwizdek konca meczu — tylko przy animowanym finale, nie przy toggle radarow
+      // (gwizdek final usuniety — synteza za slaba; wroci gdy bedzie prawdziwy gwizdek CC0)
       busy = true;
       try {
         const { data: rounds, error: rErr } = await db.from("rounds").select("id,round_number").eq("room_id", roomId);
