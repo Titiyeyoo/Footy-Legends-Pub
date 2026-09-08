@@ -454,7 +454,7 @@
   <!-- LOBBY -->
   <div id="lobby">
     <div class="lb-left">
-      <img id="lobby-logo" src="xad-logo.png" alt="11 After Dark"
+      <img id="lobby-logo" src="xad-logo.png?v=2" alt="11 After Dark"
            onerror="this.style.display='none';var h=document.getElementById('lobby-name');if(h)h.style.display='block'">
       <div id="lobby-name" class="lb-name">11 AFTER DARK</div>
       <div class="lb-tag1">BUILD YOUR XI</div>
@@ -1221,6 +1221,7 @@
       const step = room.reveal_step || 0;
 
       if (room.status === "ended"){
+        const _al = el("audiolock"); if (_al) _al.style.display = "none";   // koniec nocy — chowaj ikone dzwieku
         const rs = room.reveal_step || 0;
         if (rs >= 2){
           if (mode !== "radars"){ mode = "radars"; runFinale(room, { instant:true }); }
@@ -1592,9 +1593,8 @@
               t.cur = t.base + (t.story || 0);
               if (t._storyEl){ t._storyEl.style.display = "block"; t._storyEl.innerHTML = "&#9733; " + safe(t.storyName || "STORY"); }
             });
-            playSfx("story");           // znaleziono historie (raz na pakiet)
-            await sleep(500);           // odstep, zeby story i shift sie nie nakladaly
-            placeAll(true); playSfx("shift");   // dopiero teraz przetasowanie + jego dzwiek
+            playSfx("story");           // znaleziono historie (raz na pakiet) — JEDYNY dzwiek (koniec podwojnego)
+            placeAll(true);             // przetasowanie ciche — story juz je "opowiedzialo"
             await sleep(2000);   // jeden ruch (przejazd 1.5s) + chwila
           }
 
@@ -1607,7 +1607,7 @@
             playSfx("story");           // narracja tej druzyny
             await sleep(900);
             t.cur = t.base + (t.story || 0);
-            placeAll(true); playSfx("shift");   // wjazd na wyzsza pozycje
+            placeAll(true);   // wjazd ciche — story tej druzyny juz zabrzmialo
             await sleep(2400);   // przejazd 1.5s + niech sala zobaczy wjazd
             t._el.style.boxShadow = "";
             t._el.style.background = "rgba(15,23,16,.85)";
@@ -2052,8 +2052,7 @@
         const four = tiles.slice(0, 4).join("");
 
         el("summary").innerHTML =
-            '<div class="sum-kick">TONIGHT</div>'
-          + '<div class="sum-head">THE NIGHT IN NUMBERS</div>'
+            '<div class="sum-head">THE NIGHT IN NUMBERS</div>'
           + '<div class="sum-body">'
           +   '<div class="sum-hero"><div>' + champSvg + '</div>'
           +     '<div class="sum-ck">\u{1F3C6} CHAMPION OF THE NIGHT</div>'
