@@ -153,7 +153,7 @@
 
   <div class="hero">
     <img class="hero-logo" src="xad-logo-glow.png" alt="11 After Dark">
-    <p class="kicker">A football night for pubs</p>
+    <p class="kicker">For pubs &amp; their regulars</p>
     <h1>A live football night<em>that runs itself</em></h1>
     <p class="lede">Your regulars build a football XI on their phones. The big screen reveals the stories hidden in their line-ups. No quizmaster, no question sheets, nothing to download.</p>
     <a class="btn" href="#book">Book a free first night</a>
@@ -268,5 +268,15 @@
   })();
 </script>
 
+<script>
+  // Udostepniony link (np. z Messengera) z "#book" ma otwierac GORE strony, nie sekcje bookingu.
+  try { if (location.hash) history.replaceState(null, "", location.pathname + location.search); } catch(e){}
+  window.scrollTo(0, 0);
+  // Przycisk "Book" przewija plynnie do sekcji, ale NIE dodaje "#book" do adresu (kolejne udostepnienia sa czyste).
+  document.addEventListener("click", function(e){
+    var a = e.target.closest ? e.target.closest('a[href="#book"]') : null;
+    if (a){ e.preventDefault(); var s = document.getElementById("book"); if (s) s.scrollIntoView({ behavior:"smooth" }); }
+  });
+</script>
 </body>
 </html>
