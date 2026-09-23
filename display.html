@@ -1408,6 +1408,7 @@
         if (place < 1 || place > D.ranked.length){ busy = false; return; }
         const it = D.ranked[place-1];
         const st = story(it.entry);
+        if (st && st.coreKind === "mixed"){ st.desc = MIX_DESCS[mixDescIdx % MIX_DESCS.length]; mixDescIdx++; }   // MIXED -> rozny opis per karta (koniec powtorek w rundzie)
 
         el("rh-round").textContent = "ROUND " + room.current_round + " \u00b7 TOP " + show;
         // BEZ PUNKTOW — liczby dopiero na koniec nocy
@@ -1595,7 +1596,7 @@
               if (t._storyEl){ t._storyEl.style.display = "block"; t._storyEl.innerHTML = "&#9733; " + safe(t.storyName || "STORY"); }
             });
             playSfx("story");           // znaleziono historie (raz na pakiet)
-            await sleep(900);           // odstep JAK W BEATACH — story wybrzmiewa, dopiero potem harfa (zero nakladania)
+            await sleep(1200);          // dluzszy odstep — ogon story w pelni wybrzmiewa przed harfa (koniec nakladania)
             placeAll(true); playSfx("shift");   // bulk reshuffle (pierwszy znalazca wskakuje nad baze) + harfa
             await sleep(2000);   // jeden ruch (przejazd 1.5s) + chwila
           }
@@ -1607,7 +1608,7 @@
             t._el.style.background = "rgba(233,196,106,.16)";
             if (t._storyEl){ t._storyEl.style.display = "block"; t._storyEl.innerHTML = "&#9733; " + safe(t.storyName || "STORY"); }
             playSfx("story");           // narracja tej druzyny
-            await sleep(900);
+            await sleep(1200);
             t.cur = t.base + (t.story || 0);
             placeAll(true); playSfx("shift");   // wjazd na wyzsza pozycje + harfa
             await sleep(2400);   // przejazd 1.5s + niech sala zobaczy wjazd
@@ -1640,10 +1641,15 @@
       await sleep(RWIN_BEAT);
       // zaslona ZOSTAJE — schowa ja showOnly przy przelaczeniu na tabele (brak przeblysku karty zwyciezcy)
     }
+    // MIXED (brak historii): silnik losuje opis z malej puli per gracz -> przy kilku MIXED w rundzie te same.
+    // Na WYSWIETLANIU cyklujemy warianty per karta -> nigdy dwa identyczne w jednej rundzie.
+    const MIX_DESCS = ["No era, no theme \u2014 just your gut.","Your own blend. No rulebook.","A team only you would pick.","No script \u2014 pure instinct.","Eleven names, one hunch.","No theme. All feel."];
+    let mixDescIdx = 0;
     async function runRevealAuto(room){
       const tag = "revealauto:" + room.current_round;
       if (mode === tag) return;                 // juz leci -> nie odpalaj drugi raz (guard re-entry z pollingu)
       mode = tag;                               // ustawione synchronicznie, zanim funkcja odda sterowanie
+      mixDescIdx = 0;                            // nowy reveal rundy -> licznik opisow MIXED od zera
       try {
         await runLoading();                                    // 0) pasek "COMPILING THE STORIES" przed tabela
         if (mode !== tag) return;
