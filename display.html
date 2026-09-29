@@ -424,6 +424,70 @@
     font-size:20px; color:var(--gold); background:rgba(15,23,16,.85); border:1px solid var(--gold);
     border-radius:50%; box-shadow:0 0 14px rgba(0,0,0,.5); animation:alkPulse 2.2s ease-in-out infinite; }
   @keyframes alkPulse { 0%,100%{opacity:.65} 50%{opacity:1} }
+
+  /* ═══════════ COMPACT — display na TELEFONIE w poziomie (mini-TV na stojaku) ═══════════ */
+  /* Wszystko pod body.compact. TV/laptop tego nie dostaja -> ekran duzy zostaje nietkniety. */
+
+  /* --- BOISKO POZIOME (bramkarz z lewej, atak w prawo) --- */
+  body.compact .card-body { gap:2vw; }
+  body.compact .col-pitch { flex:1 1 auto; }
+  body.compact .col-pitch .tv-pitch.land { width:auto; height:100%; max-width:100%; max-height:100%; aspect-ratio:4/3; }
+  body.compact .col-story { flex:0 0 32%; padding:0 0 0 1.4vw; justify-content:center; display:flex; flex-direction:column; }
+  body.compact .col-story .bench-line { display:none; }          /* lawka ukryta na telefonie — pitch ma byc duzy */
+  body.compact .story-name { font-size:2.6vh; }
+  body.compact .story-desc { font-size:1.9vh; line-height:1.5; }
+  body.compact .story-rest { font-size:1.7vh; }
+  /* kolka zawodnikow i nazwiska skalowane wysokoscia ekranu (nie cqw — poziome boisko jest szerokie) */
+  body.compact .tv-pitch.land .pcircle { width:9.2vh; height:9.2vh; font-size:3.4vh; border-width:2px; }
+  body.compact .tv-pitch.land .pname { font-size:2.5vh; margin-top:.5vh; }
+  body.compact .tv-pitch.land .pclub { font-size:1.9vh; }
+  body.compact .tv-pitch.land .pdot { width:16%; }
+  body.compact .tv-pitch.land .eradot { width:1.6vh; height:1.6vh; }
+  /* dekoracje pod poziom: linia srodkowa PIONOWA + kolo w srodku; pola karne ukryte (w poziomie zle by sie ustawily) */
+  body.compact .tv-pitch.land::before { left:50%; right:auto; top:0; bottom:0; width:2px; height:auto; }
+  body.compact .tv-pitch.land::after { left:50%; top:50%; width:auto; height:34%; aspect-ratio:1/1; }
+  body.compact .tv-pitch.land .tv-penalty, body.compact .tv-pitch.land .tv-sixyard { display:none; }
+  body.compact .card-top { margin-bottom:.6vh; }
+  body.compact .card .c-team { font-size:2.6vh; }
+  body.compact .card.first .c-team { font-size:2.9vh; }
+  body.compact .card .c-rank { font-size:1.9vh; }
+
+  /* --- LOBBY (kod dalej bohater, druzyny ciasniej) --- */
+  body.compact .lb-left { flex:0 0 40%; padding:2vh 2%; gap:.6vh; }
+  body.compact #lobby-logo { width:min(14vh,120px); }
+  body.compact .lb-tag1 { font-size:2vh; }
+  body.compact .lb-tag2 { font-size:1.4vh; }
+  body.compact .lb-join { font-size:1.2vh; margin-top:1vh; }
+  body.compact .lb-url  { font-size:1.35vh; }
+  body.compact .lb-code { font-size:8.5vh; }
+  body.compact #qr img  { width:min(15vh,120px); }
+  body.compact .lb-orscan { font-size:1.2vh; }
+  body.compact .lb-count { font-size:2vh; margin-bottom:1.4vh; }
+  body.compact .lb-grid.c2, body.compact .lb-grid.c3, body.compact .lb-grid.c4 { grid-template-columns:repeat(3,minmax(0,1fr)); gap:1vh .8vw; }
+  body.compact .lb-grid .team { font-size:1.9vh !important; min-height:0 !important; padding:1.1vh 6px !important; }
+  body.compact .lb-waiting { font-size:2.2vh; }
+
+  /* --- REVEAL BAZA (wiersze rankingu) --- */
+  body.compact #bt-wrap { max-width:96vw !important; }
+  body.compact .tv-th .t1 { font-size:2.6vh; }
+  body.compact .tv-th .t2 { font-size:1.5vh; }
+
+  /* --- LIVE TABLE: TOP 3 wyrozniony, reszta przygaszona, wszystko na ekranie --- */
+  body.compact .tt-team, body.compact .tt-cell { font-size:1.9vh !important; }
+  body.compact .tt-pos, body.compact .tt-num { font-size:1.9vh !important; }
+  body.compact #titlestable td { padding:.7vh .6vw !important; }
+
+  /* --- FINAL / PODIUM --- */
+  body.compact .rv-title { font-size:2.8vh; }
+  body.compact .rv-sub { font-size:1.5vh; }
+  body.compact .pd-name { font-size:2vh; }
+  body.compact .pd-type { font-size:1.3vh; }
+  body.compact .pd-sub { font-size:1.15vh; }
+  body.compact .pd-score { font-size:2.6vh; }
+  body.compact .pd-radar { max-width:26vw; }
+
+  /* --- SUMMARY: zmiesc w poziomie, pozwol przewinac jesli trzeba --- */
+  body.compact #summary { max-height:100vh; overflow-y:auto; }
 </style>
 </head>
 <body>
@@ -556,6 +620,22 @@
     function safe(t){ const d=document.createElement("div"); d.textContent = t==null ? "" : String(t); return d.innerHTML; }
     function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
 
+    // ── COMPACT: display na TELEFONIE w poziomie (mini-TV na stojaku) ──
+    // TV/laptop nigdy nie wchodza w ten tryb (brak coarse pointer / ekran wysoki).
+    function isCompact(){ return document.body.classList.contains("compact"); }
+    function detectCompact(){
+      try {
+        const coarse = window.matchMedia && window.matchMedia("(pointer:coarse)").matches;
+        const landscape = window.innerWidth > window.innerHeight;
+        const shortSide = Math.min(window.innerWidth, window.innerHeight);
+        return !!(coarse && landscape && shortSide <= 560);
+      } catch(e){ return false; }
+    }
+    function applyCompact(){ document.body.classList.toggle("compact", detectCompact()); }
+    window.addEventListener("resize", applyCompact);
+    window.addEventListener("orientationchange", function(){ setTimeout(applyCompact, 160); });
+    applyCompact();
+
     // ── AUDIO: krotkie SFX na TV. Przegladarka gra dopiero po 1. kliknieciu w to okno. ──
     const SFX = {};
     ["story","shift","start","final"].forEach(function(n){
@@ -672,12 +752,17 @@
       const geo = FORMS[P.formation] || FORMS["4-4-2"];
       const core = {}; ((st && st.core) || []).forEach(function(n){ core[n] = 1; });
       const kind = (st && st.coreKind === "arch") ? "arch" : "narr";
-      let h = '<div class="tv-pitch"><div class="tv-penalty"></div><div class="tv-sixyard"></div>';
+      // COMPACT (telefon w poziomie): boisko obrocone na POZIOM — bramkarz z lewej, atak w prawo.
+      // TV/laptop = pionowe jak dotad. Transformacja: land_x = 1 - portrait_y, land_y = portrait_x.
+      const land = isCompact();
+      let h = '<div class="tv-pitch' + (land ? " land" : "") + '"><div class="tv-penalty"></div><div class="tv-sixyard"></div>';
       for (let i=0; i<geo.length; i++){
         const g = geo[i], p = P.slots[i];
         if (!p) continue;
         const club = clubLabel(p);
-        h += '<div class="pdot ' + (GRP[p.p]||"") + (core[p.n] ? " core " + kind : "") + '" style="left:'+(g.x*100)+'%;top:'+(g.y*100)+'%">'
+        const gx = land ? (1 - g.y) : g.x;
+        const gy = land ? g.x : g.y;
+        h += '<div class="pdot ' + (GRP[p.p]||"") + (core[p.n] ? " core " + kind : "") + '" style="left:'+(gx*100)+'%;top:'+(gy*100)+'%">'
            +   '<div class="pcircle">' + safe(g.pos)
            +     (p.e && ERA[p.e] ? '<span class="eradot ' + ERA[p.e] + '"></span>' : "")
            +   '</div>'
@@ -738,7 +823,7 @@
       const pts = core.map(function(d){
         const c = d.querySelector(".pcircle").getBoundingClientRect();
         return { dot:d, x: c.left - pr.left + c.width/2, y: c.top - pr.top + c.height/2 };
-      }).sort(function(a,b){ return b.y - a.y; });        // od bramkarza w gore
+      }).sort(function(a,b){ return isCompact() ? (a.x - b.x) : (b.y - a.y); });   // pion: bramkarz w gore; compact/poziom: lewo->prawo
       all.forEach(function(d){ d.classList.add("story-dormant"); d.classList.remove("story-lit"); });
       await sleep(850);                                    // cisza: werdykt siada, dopiero potem ruch
       const ball = document.createElement("div");
