@@ -429,28 +429,31 @@
   /* Wszystko pod body.compact. TV/laptop tego nie dostaja -> ekran duzy zostaje nietkniety. */
 
   /* --- BOISKO POZIOME (bramkarz z lewej, atak w prawo) --- */
-  body.compact .card-body { gap:2vw; }
-  body.compact .col-pitch { flex:1 1 auto; }
-  body.compact .col-pitch .tv-pitch.land { width:auto; height:100%; max-width:100%; max-height:100%; aspect-ratio:4/3; }
-  body.compact .col-story { flex:0 0 32%; padding:0 0 0 1.4vw; justify-content:center; display:flex; flex-direction:column; }
+  body.compact .card-body { gap:2vw; align-items:center; }
+  body.compact .col-pitch { flex:0 0 auto; }
+  /* JAWNY rozmiar przez vh (jak na TV) — height:100% sie nie rozwiazywalo (card-body ma height:auto) i boisko sie zapadalo */
+  body.compact .col-pitch .tv-pitch.land { height:62vh; width:auto; aspect-ratio:4/3; max-width:64vw; overflow:visible; }
+  body.compact .col-story { flex:1 1 auto; padding:0 0 0 1.4vw; justify-content:center; display:flex; flex-direction:column; }
   body.compact .col-story .bench-line { display:none; }          /* lawka ukryta na telefonie — pitch ma byc duzy */
-  body.compact .story-name { font-size:2.6vh; }
-  body.compact .story-desc { font-size:1.9vh; line-height:1.5; }
-  body.compact .story-rest { font-size:1.7vh; }
-  /* kolka zawodnikow i nazwiska skalowane wysokoscia ekranu (nie cqw — poziome boisko jest szerokie) */
-  body.compact .tv-pitch.land .pcircle { width:9.2vh; height:9.2vh; font-size:3.4vh; border-width:2px; }
-  body.compact .tv-pitch.land .pname { font-size:2.5vh; margin-top:.5vh; }
-  body.compact .tv-pitch.land .pclub { font-size:1.9vh; }
-  body.compact .tv-pitch.land .pdot { width:16%; }
-  body.compact .tv-pitch.land .eradot { width:1.6vh; height:1.6vh; }
+  body.compact .story-name { font-size:2.4vh; }
+  body.compact .story-desc { font-size:1.8vh; line-height:1.5; }
+  body.compact .story-rest { font-size:1.6vh; }
+  /* kolka mniejsze + nazwiska w JEDNEJ linii (koniec lamania na 2 znaki); klub ukryty na telefonie */
+  body.compact .tv-pitch.land .pcircle { width:6.6vh; height:6.6vh; font-size:2.5vh; border-width:2px; }
+  body.compact .tv-pitch.land .pname { font-size:1.7vh; margin-top:.4vh; white-space:nowrap; max-width:none; }
+  body.compact .tv-pitch.land .pclub { display:none; }
+  body.compact .tv-pitch.land .pdot { width:auto; }
+  body.compact .tv-pitch.land .eradot { width:1.4vh; height:1.4vh; }
   /* dekoracje pod poziom: linia srodkowa PIONOWA + kolo w srodku; pola karne ukryte (w poziomie zle by sie ustawily) */
   body.compact .tv-pitch.land::before { left:50%; right:auto; top:0; bottom:0; width:2px; height:auto; }
   body.compact .tv-pitch.land::after { left:50%; top:50%; width:auto; height:34%; aspect-ratio:1/1; }
   body.compact .tv-pitch.land .tv-penalty, body.compact .tv-pitch.land .tv-sixyard { display:none; }
   body.compact .card-top { margin-bottom:.6vh; }
-  body.compact .card .c-team { font-size:2.6vh; }
-  body.compact .card.first .c-team { font-size:2.9vh; }
-  body.compact .card .c-rank { font-size:1.9vh; }
+  body.compact .card .c-team { font-size:2.4vh; }
+  body.compact .card.first .c-team { font-size:2.7vh; }
+  body.compact .card .c-rank { font-size:1.8vh; }
+  /* QR w rogu (#joincorner) zaslania na malym ekranie -> chowamy w compact (lobby i tak ma duzy QR) */
+  body.compact #joincorner { display:none !important; }
 
   /* --- LOBBY (kod dalej bohater, druzyny ciasniej) --- */
   body.compact .lb-left { flex:0 0 40%; padding:2vh 2%; gap:.6vh; }
