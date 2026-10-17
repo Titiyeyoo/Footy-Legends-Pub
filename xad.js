@@ -141,7 +141,12 @@ function buildPool(){
   const add  = p => { pool.push(p); used.add(p.n); quota[p.p]--; };
 
   // 1) Dwa ziarna narracji
-  const seedKeys = shuffle(Object.keys(NARRATIVES)).slice(0,2);
+  // ANTY-POWTORKA (pub): nie zasiewaj narracji, ktore gracz mial w ostatnich rundach.
+  // window.FL_AVOID_SEEDS ustawia TYLKO pub (player.html); w solo jest puste -> zachowanie bez zmian.
+  const _avoid = (typeof window !== "undefined" && Array.isArray(window.FL_AVOID_SEEDS)) ? window.FL_AVOID_SEEDS : [];
+  let _seedCands = Object.keys(NARRATIVES).filter(k => !_avoid.includes(k));
+  if (_seedCands.length < 2) _seedCands = Object.keys(NARRATIVES);   // za malo po filtrze -> luzuj
+  const seedKeys = shuffle(_seedCands).slice(0,2);
   seedKeys.forEach(k => {
     const N = NARRATIVES[k];
     const th = CFG.THRESHOLDS[N.cat];
