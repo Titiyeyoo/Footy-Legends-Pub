@@ -421,9 +421,26 @@
   // --- ROLL: tylko bramka (brak rolla przed startem). Puli NIE zapisujemy tutaj:
   //     xad.js serializuje draft do localStorage dopiero po wstawieniu 1. gracza
   //     (przy pustym skladzie kasuje zapis), wiec pule + sklad zapisujemy RAZEM przy LOCK IN. ---
+  // --- ANTY-POWTORKA HISTORII: pamietaj ostatnie 2 narracje TEGO gracza w TYM pokoju,
+  //     i steruj nastepna pule tak, by ich nie zasiewac (xad.js czyta window.FL_AVOID_SEEDS). ---
+  function _recentKey(){ return "fl_pub_recent_stories_" + CODE; }
+  function getRecentStories(){
+    try { return JSON.parse(localStorage.getItem(_recentKey()) || "[]"); } catch(e){ return []; }
+  }
+  function pushRecentStory(k){
+    if (!k) return;
+    try {
+      let a = getRecentStories().filter(function(x){ return x !== k; });   // bez duplikatow
+      a.push(k);
+      while (a.length > 2) a.shift();                                       // trzymaj ostatnie 2
+      localStorage.setItem(_recentKey(), JSON.stringify(a));
+    } catch(e){}
+  }
+
   const _origDraw = window.xadDraw;
   window.xadDraw = function(){
     if (!playing) return;
+    try { window.FL_AVOID_SEEDS = getRecentStories(); } catch(e){ window.FL_AVOID_SEEDS = []; }   // pula omija ostatnie historie
     if (typeof _origDraw === "function") _origDraw();
   };
 
@@ -450,6 +467,8 @@
             if (b && typeof b.story === "number") st.w2 = b.story;
           } catch(e){}
           title = JSON.stringify(st);
+          // zapamietaj narracje tego gracza (tylko prawdziwe historie, nie archetypy/mixed) -> anty-powtorka
+          try { if (st.coreKind === "narr" && st.key) pushRecentStory(st.key); } catch(e){}
         }
       }
     } catch(e){ console.warn("story:", e); }
