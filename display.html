@@ -498,18 +498,22 @@
   :root{ --bar-t:34px; --bar-b:22px; }
   #topbar, #ticker{ position:fixed; left:0; right:0; z-index:40; pointer-events:none;
     display:none; align-items:center; justify-content:space-between; font-family:var(--px); }
-  #topbar{ top:0; padding:9px 20px; border-bottom:1px solid rgba(233,196,106,.35);
-    background:linear-gradient(180deg,rgba(0,0,0,.6),rgba(0,0,0,0)); }
+  #topbar{ top:0; padding:10px 20px; border-bottom:2px solid rgba(233,196,106,.55);
+    background:rgba(5,12,8,.92); box-shadow:0 6px 16px rgba(0,0,0,.45); }
   #topbar .tb-mark{ color:var(--gold); font-size:12px; letter-spacing:1px; text-shadow:0 0 10px rgba(233,196,106,.5); }
   #topbar .tb-ctx{ color:#cdd6cc; font-size:9px; letter-spacing:2px; display:flex; align-items:center; gap:8px; }
   #topbar .tb-pip{ width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:tbPip 1.6s ease-in-out infinite; }
   @keyframes tbPip{ 50%{ opacity:.35; } }
-  #ticker{ bottom:0; padding:6px 20px; border-top:1px solid rgba(233,196,106,.25);
-    background:linear-gradient(0deg,rgba(0,0,0,.6),rgba(0,0,0,0)); font-size:8px; letter-spacing:1.5px; color:#7f8a7d; }
+  #ticker{ bottom:0; padding:7px 20px; border-top:2px solid rgba(233,196,106,.45);
+    background:rgba(5,12,8,.92); box-shadow:0 -6px 16px rgba(0,0,0,.45);
+    font-size:8px; letter-spacing:1.5px; color:#8f9a8c; }
   #ticker b{ color:var(--gold); }
   #crt{ position:fixed; inset:0; z-index:55; pointer-events:none;
     background:repeating-linear-gradient(180deg,transparent 0 2px,rgba(0,0,0,.18) 2px 4px);
     box-shadow:inset 0 0 130px rgba(0,0,0,.6); }
+  /* faktura NIE na boisku ani na prawej kolumnie (narracja + lawka) — male nazwiska czytelne.
+     Faktura zostaje na naglowkach, tabelach i summary (poza karta). */
+  .tv-pitch, .col-story{ position:relative; z-index:56; }
   /* miejsce na pasek/ticker — ekrany 100vh oddaja po kawalku (box-sizing:border-box -> zero scrolla) */
   #roundview{ padding-top:calc(2vh + var(--bar-t)) !important; padding-bottom:calc(4.5vh + var(--bar-b)) !important; }
   #summary{ padding-top:calc(2.4vh + var(--bar-t)) !important; padding-bottom:calc(1.8vh + var(--bar-b)) !important; }
@@ -905,6 +909,8 @@
       // BROADCAST OPRAWA: pasek + ticker widoczne przez caly wieczor, chowane na ekranie kodu/poczekalni/draftu
       const _bc = (id !== "connect" && id !== "lobby" && id !== "drafting");
       fxBars(_bc); if (_bc) fxCtx(FX_CTX[id] || "");
+      // summary ma wlasna stopke z marka+URL -> nie dubluj tickera (mniej powtorek nazwy)
+      const _tk = el("ticker"); if (_tk && id === "summary") _tk.style.display = "none";
     }
 
     // ── BROADCAST OPRAWA: kontekst paska (tylko grafika; nie dotyka stanu gry) ──
