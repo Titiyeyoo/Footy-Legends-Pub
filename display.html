@@ -495,8 +495,8 @@
   /* ═══════════ BROADCAST OPRAWA (dodane 2026-10-17): pasek + faktura CRT + ticker ═══════════
      TYLKO warstwa graficzna. Nakladki pointer-events:none. Zero zmian w mechanice/animacjach/dzwiekach.
      z-index: faktura(55) nad trescia i paskami(40), ale POD QR/flash-zwyciezcy(60) i audiolock(90) — te zostaja ostre. */
-  :root{ --bar-t:34px; --bar-b:22px; }
-  #topbar, #ticker{ position:fixed; left:0; right:0; z-index:40; pointer-events:none;
+  :root{ --bar-t:34px; --bar-b:0px; }   /* ticker usuniety -> brak dolnej rezerwy */
+  #topbar{ position:fixed; left:0; right:0; z-index:40; pointer-events:none;
     display:none; align-items:center; justify-content:space-between; font-family:var(--px); }
   #topbar{ top:0; padding:10px 20px; border-bottom:2px solid rgba(233,196,106,.55);
     background:rgba(5,12,8,.92); box-shadow:0 6px 16px rgba(0,0,0,.45); }
@@ -504,10 +504,6 @@
   #topbar .tb-ctx{ color:#cdd6cc; font-size:9px; letter-spacing:2px; display:flex; align-items:center; gap:8px; }
   #topbar .tb-pip{ width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:tbPip 1.6s ease-in-out infinite; }
   @keyframes tbPip{ 50%{ opacity:.35; } }
-  #ticker{ bottom:0; padding:7px 20px; border-top:2px solid rgba(233,196,106,.45);
-    background:rgba(5,12,8,.92); box-shadow:0 -6px 16px rgba(0,0,0,.45);
-    font-size:8px; letter-spacing:1.5px; color:#8f9a8c; }
-  #ticker b{ color:var(--gold); }
   #crt{ position:fixed; inset:0; z-index:55; pointer-events:none;
     background:repeating-linear-gradient(180deg,transparent 0 2px,rgba(0,0,0,.18) 2px 4px);
     box-shadow:inset 0 0 130px rgba(0,0,0,.6); }
@@ -518,11 +514,10 @@
   #roundview{ padding-top:calc(2vh + var(--bar-t)) !important; padding-bottom:calc(4.5vh + var(--bar-b)) !important; }
   #summary{ padding-top:calc(2.4vh + var(--bar-t)) !important; padding-bottom:calc(1.8vh + var(--bar-b)) !important; }
   #loading{ padding-top:var(--bar-t); padding-bottom:var(--bar-b); }
-  body.compact{ --bar-t:22px; --bar-b:16px; }
+  body.compact{ --bar-t:22px; --bar-b:0px; }
   body.compact #topbar{ padding:5px 12px; }
   body.compact #topbar .tb-mark{ font-size:9px; }
   body.compact #topbar .tb-ctx{ font-size:7px; }
-  body.compact #ticker{ padding:4px 12px; font-size:6px; }
   /* QR spychany pod pasek; ikona dzwieku w LEWY DOLNY rog (nad ticker), zeby NIE nachodzila na QR */
   #joincorner{ top: calc(16px + var(--bar-t)) !important; }
   #audiolock{ top:auto !important; bottom: calc(var(--bar-b) + 12px) !important; left:16px !important; right:auto !important; }
@@ -531,7 +526,6 @@
 <body>
   <!-- BROADCAST OPRAWA (dodane 2026-10-17): pasek + ticker + faktura CRT. Nakladki, pointer-events:none, zero wplywu na logike. -->
   <div id="topbar"><span class="tb-mark">11 AFTER DARK</span><span class="tb-ctx"><span class="tb-pip"></span><span id="tb-ctx-text"></span></span></div>
-  <div id="ticker"><span>FOOTY LEGENDS &middot; ELEVEN AFTER DARK</span><span>elevenafterdark.com</span></div>
   <div id="crt"></div>
 
   <div id="rv-status" style="position:fixed;top:6px;left:8px;right:8px;color:#e2554a;font-size:9px;z-index:9999;text-align:left;white-space:pre-wrap"></div>
@@ -909,8 +903,6 @@
       // BROADCAST OPRAWA: pasek + ticker widoczne przez caly wieczor, chowane na ekranie kodu/poczekalni/draftu
       const _bc = (id !== "connect" && id !== "lobby" && id !== "drafting");
       fxBars(_bc); if (_bc) fxCtx(FX_CTX[id] || "");
-      // summary ma wlasna stopke z marka+URL -> nie dubluj tickera (mniej powtorek nazwy)
-      const _tk = el("ticker"); if (_tk && id === "summary") _tk.style.display = "none";
     }
 
     // ── BROADCAST OPRAWA: kontekst paska (tylko grafika; nie dotyka stanu gry) ──
@@ -1739,7 +1731,7 @@
             });
             playSfx("story");           // znaleziono historie (raz na pakiet)
             await sleep(1200);          // dluzszy odstep — ogon story w pelni wybrzmiewa przed harfa (koniec nakladania)
-            placeAll(true); playSfx("shift");   // bulk reshuffle (pierwszy znalazca wskakuje nad baze) + harfa
+            placeAll(true);   // bulk reshuffle — shift zdjety stad (nie pasowal przy tabeli rundy) -> przeniesiony na final
             await sleep(2000);   // jeden ruch (przejazd 1.5s) + chwila
           }
 
@@ -1752,7 +1744,7 @@
             playSfx("story");           // narracja tej druzyny
             await sleep(1200);
             t.cur = t.base + (t.story || 0);
-            placeAll(true); playSfx("shift");   // wjazd na wyzsza pozycje + harfa
+            placeAll(true);   // wjazd na wyzsza pozycje — shift zdjety stad -> przeniesiony na final
             await sleep(2400);   // przejazd 1.5s + niech sala zobaczy wjazd
             t._el.style.boxShadow = "";
             t._el.style.background = "rgba(15,23,16,.85)";
@@ -2006,6 +1998,7 @@
           });
           if (rows.length){
             await sleep(60);                              // pozwol przegladarce zapamietac pozycje startowa
+            playSfx("shift");   // tabela po zwyciezcy rundy SIE PORUSZA -> shift (tylko gdy moved)
             rows.forEach(function(r){
               r.style.transition = "transform 1.6s cubic-bezier(.5,.05,.2,1), background .6s";
               r.style.transform = "translate(0,0)";
