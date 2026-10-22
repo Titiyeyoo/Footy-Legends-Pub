@@ -491,9 +491,45 @@
 
   /* --- SUMMARY: zmiesc w poziomie, pozwol przewinac jesli trzeba --- */
   body.compact #summary { max-height:100vh; overflow-y:auto; }
+
+  /* ═══════════ BROADCAST OPRAWA (dodane 2026-10-17): pasek + faktura CRT + ticker ═══════════
+     TYLKO warstwa graficzna. Nakladki pointer-events:none. Zero zmian w mechanice/animacjach/dzwiekach.
+     z-index: faktura(55) nad trescia i paskami(40), ale POD QR/flash-zwyciezcy(60) i audiolock(90) — te zostaja ostre. */
+  :root{ --bar-t:34px; --bar-b:22px; }
+  #topbar, #ticker{ position:fixed; left:0; right:0; z-index:40; pointer-events:none;
+    display:none; align-items:center; justify-content:space-between; font-family:var(--px); }
+  #topbar{ top:0; padding:9px 20px; border-bottom:1px solid rgba(233,196,106,.35);
+    background:linear-gradient(180deg,rgba(0,0,0,.6),rgba(0,0,0,0)); }
+  #topbar .tb-mark{ color:var(--gold); font-size:12px; letter-spacing:1px; text-shadow:0 0 10px rgba(233,196,106,.5); }
+  #topbar .tb-ctx{ color:#cdd6cc; font-size:9px; letter-spacing:2px; display:flex; align-items:center; gap:8px; }
+  #topbar .tb-pip{ width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:tbPip 1.6s ease-in-out infinite; }
+  @keyframes tbPip{ 50%{ opacity:.35; } }
+  #ticker{ bottom:0; padding:6px 20px; border-top:1px solid rgba(233,196,106,.25);
+    background:linear-gradient(0deg,rgba(0,0,0,.6),rgba(0,0,0,0)); font-size:8px; letter-spacing:1.5px; color:#7f8a7d; }
+  #ticker b{ color:var(--gold); }
+  #crt{ position:fixed; inset:0; z-index:55; pointer-events:none;
+    background:repeating-linear-gradient(180deg,transparent 0 2px,rgba(0,0,0,.18) 2px 4px);
+    box-shadow:inset 0 0 130px rgba(0,0,0,.6); }
+  /* miejsce na pasek/ticker — ekrany 100vh oddaja po kawalku (box-sizing:border-box -> zero scrolla) */
+  #roundview{ padding-top:calc(2vh + var(--bar-t)) !important; padding-bottom:calc(4.5vh + var(--bar-b)) !important; }
+  #summary{ padding-top:calc(2.4vh + var(--bar-t)) !important; padding-bottom:calc(1.8vh + var(--bar-b)) !important; }
+  #loading{ padding-top:var(--bar-t); padding-bottom:var(--bar-b); }
+  body.compact{ --bar-t:22px; --bar-b:16px; }
+  body.compact #topbar{ padding:5px 12px; }
+  body.compact #topbar .tb-mark{ font-size:9px; }
+  body.compact #topbar .tb-ctx{ font-size:7px; }
+  body.compact #ticker{ padding:4px 12px; font-size:6px; }
+  /* QR spychany pod pasek; ikona dzwieku w LEWY DOLNY rog (nad ticker), zeby NIE nachodzila na QR */
+  #joincorner{ top: calc(16px + var(--bar-t)) !important; }
+  #audiolock{ top:auto !important; bottom: calc(var(--bar-b) + 12px) !important; left:16px !important; right:auto !important; }
 </style>
 </head>
 <body>
+  <!-- BROADCAST OPRAWA (dodane 2026-10-17): pasek + ticker + faktura CRT. Nakladki, pointer-events:none, zero wplywu na logike. -->
+  <div id="topbar"><span class="tb-mark">11 AFTER DARK</span><span class="tb-ctx"><span class="tb-pip"></span><span id="tb-ctx-text"></span></span></div>
+  <div id="ticker"><span>FOOTY LEGENDS &middot; ELEVEN AFTER DARK</span><span>elevenafterdark.com</span></div>
+  <div id="crt"></div>
+
   <div id="rv-status" style="position:fixed;top:6px;left:8px;right:8px;color:#e2554a;font-size:9px;z-index:9999;text-align:left;white-space:pre-wrap"></div>
 
   <!-- przycisk zmiany pokoju (widoczny gdy jestesmy podlaczeni) -->
@@ -866,7 +902,18 @@
       // QR w rogu: schowany na ekranie laczenia i w poczekalni (tam jest DUZY QR), widoczny przez reszte wieczoru
       const jn = el("joincorner");
       if (jn) jn.style.display = (id === "connect" || id === "lobby" || id === "summary") ? "none" : "block";
+      // BROADCAST OPRAWA: pasek + ticker widoczne przez caly wieczor, chowane na ekranie kodu/poczekalni/draftu
+      const _bc = (id !== "connect" && id !== "lobby" && id !== "drafting");
+      fxBars(_bc); if (_bc) fxCtx(FX_CTX[id] || "");
     }
+
+    // ── BROADCAST OPRAWA: kontekst paska (tylko grafika; nie dotyka stanu gry) ──
+    const FX_CTX = { loading:"COMPILING THE STORIES", board:"DRAFT BOARD", roundview:"REVEAL",
+                     tableview:"LIVE TABLE", reveal:"FINAL STANDINGS", breakview:"HYDRATION BREAK", summary:"FULL TIME" };
+    function fxCtx(txt){ const n = el("tb-ctx-text"); if (n && txt != null) n.textContent = txt; }
+    function fxBars(show){ const a = el("topbar"), b = el("ticker");
+      if (a) a.style.display = show ? "flex" : "none";
+      if (b) b.style.display = show ? "flex" : "none"; }
 
 
     /* ══════════════════════════════════════════════════════════════════
@@ -1499,6 +1546,7 @@
         if (st && st.coreKind === "mixed"){ st.desc = MIX_DESCS[mixDescIdx % MIX_DESCS.length]; mixDescIdx++; }   // MIXED -> rozny opis per karta (koniec powtorek w rundzie)
 
         el("rh-round").textContent = "ROUND " + room.current_round + " \u00b7 TOP " + show;
+        fxCtx("ROUND " + room.current_round + " \u00b7 TOP " + show);   // BROADCAST OPRAWA: kontekst paska
         // BEZ PUNKTOW — liczby dopiero na koniec nocy
         const nameHtml = st
           ? (st.emoji ? '<span class="sn-emoji">' + safe(st.emoji) + '</span>' : "")
@@ -1723,6 +1771,7 @@
       const ov = el("rwinner"); if (!ov) return;
       const k = el("rw-kick"), nm = el("rw-name");
       if (k) k.textContent = "ROUND " + round + " WINNER";
+      fxCtx("ROUND " + round + " · WINNER");   // BROADCAST OPRAWA: kontekst paska
       if (nm) nm.textContent = name || "\u2014";
       ov.style.display = "flex";
       ov.classList.remove("play"); void ov.offsetWidth; ov.classList.add("play");   // restart animacji
