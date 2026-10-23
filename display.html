@@ -112,6 +112,15 @@
   #chbump.out .chb-cover{ transform:translateX(106%); transition:transform .5s cubic-bezier(.6,0,.3,1); }
   #chbump.out .chb-ball{ opacity:0; transition:opacity .1s; }
   #chbump.out .chb-title{ opacity:0; transition:opacity .18s ease; }
+  /* ═══ FINAŁ: poziomy ticker reszty tabeli (miejsca 4+), dodane 2026-10-23 — jedzie w pętli jak pasek wyników w TV ═══ */
+  #fin-ticker{ position:fixed; left:0; right:0; bottom:var(--bar-b); height:34px; z-index:45; overflow:hidden; opacity:0; transition:opacity .5s;
+    border-top:1px solid rgba(233,196,106,.22); background:linear-gradient(180deg,rgba(0,0,0,.12),rgba(0,0,0,.5));
+    -webkit-mask:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent); mask:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent); }
+  #fin-ticker.on{ opacity:1; }
+  #fin-ticker .ft-track{ position:absolute; top:0; bottom:0; left:0; display:flex; align-items:center; white-space:nowrap; animation:ftCrawl 26s linear infinite; }
+  @keyframes ftCrawl{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  #fin-ticker .ft-item{ display:inline-flex; align-items:center; gap:7px; padding:0 18px; font-family:'Press Start 2P',monospace; font-size:10px; border-right:1px solid rgba(255,255,255,.1); }
+  #fin-ticker .ft-item .r{ color:#e9c46a; } #fin-ticker .ft-item .n{ color:#eafff0; } #fin-ticker .ft-item .s{ color:#e9c46a; }
   /* ── PRZEJSCIE "COMPILING THE STORIES" (po locku, przed tabela) ── */
   #loading { display:none; flex-direction:column; align-items:center; justify-content:center;
              width:100%; margin:auto 0; padding-inline:4vw; }
@@ -908,6 +917,7 @@
       ["connect","loading","lobby","drafting","board","roundview","tableview","reveal","breakview","summary"].forEach(function(v){
         const n = el(v); if (n) n.style.display = "none";
       });
+      var _ft = document.getElementById("fin-ticker"); if (_ft) _ft.remove();   // ticker reszty tabeli znika przy zmianie ekranu (finalePodium odtwarza go po swoim showOnly)
       const n = el(id);
       // roundview/lobby/connect/loading = flex, reszta block. NIGDY "" — CSS ma display:none
       if (n) n.style.display = (id === "lobby" || id === "connect" || id === "roundview" || id === "loading" || id === "breakview" || id === "summary") ? "flex" : "block";
@@ -2053,7 +2063,7 @@
       const container = document.createElement("div");
       container.className = "confetti-container";
       document.body.appendChild(container);
-      const COUNT = 120;
+      const COUNT = 200;   // więcej konfetti (finał mocniej), 2026-10-23
       for (let i=0;i<COUNT;i++){
         const piece = document.createElement("div");
         piece.className = "confetti-piece";
@@ -2112,6 +2122,22 @@
         if (typeof atPeak === "function"){ try { atPeak(); } catch(_e){} }
         var old = document.getElementById("chbump"); if (old && old.parentNode) old.parentNode.removeChild(old);
       }
+    }
+
+    // FINAŁ: poziomy ticker reszty tabeli (miejsca 4..n) — jedzie w pętli, bez dźwięku. Dodane 2026-10-23.
+    function buildFinaleTicker(ranked){
+      var old = document.getElementById("fin-ticker"); if (old) old.remove();
+      var n = ranked.length; if (n <= 3) return;   // tylko gdy ktos jest poza podium
+      var items = "";
+      for (var r = 4; r <= n; r++){
+        var t = ranked[r-1];
+        items += '<span class="ft-item"><span class="r">'+r+'</span><span class="n">'+safe(t.name)+'</span><span class="s">'+t.score+'</span></span>';
+      }
+      var bar = document.createElement("div"); bar.id = "fin-ticker";
+      var track = document.createElement("div"); track.className = "ft-track";
+      track.innerHTML = items + items;   // podwojone -> plynna petla
+      bar.appendChild(track); document.body.appendChild(bar);
+      requestAnimationFrame(function(){ bar.classList.add("on"); });
     }
 
     async function finalePodium(ranked, skladyD, ileRund, instant){
@@ -2185,6 +2211,7 @@
       if (instant){
         kolumny[3].classList.add("in"); kolumny[2].classList.add("in"); kolumny[1].classList.add("in");
         el("rv-crown").classList.add("shown");
+        buildFinaleTicker(ranked);   // ticker reszty tabeli (4+)
         return;
       }
 
@@ -2196,6 +2223,7 @@
       kolumny[1].classList.add("in");
       await sleep(900);          // kolumna zwyciezcy wjechala (tranzycja .55s), wynik widoczny
       confettiBurst();           // -> konfetti FL (wolniejsze) i znika
+      buildFinaleTicker(ranked); // ticker reszty tabeli (4+), jedzie w petli pod podium
     }
 
     // ── NIGHT SUMMARY: po podium (host klika SHOW SUMMARY -> reveal_step>=1) ──
