@@ -532,6 +532,7 @@
   #roundview{ padding-top:calc(2vh + var(--bar-t)) !important; padding-bottom:calc(4.5vh + var(--bar-b)) !important; }
   #summary{ padding-top:calc(2.4vh + var(--bar-t)) !important; padding-bottom:calc(1.8vh + var(--bar-b)) !important; }
   #loading{ padding-top:var(--bar-t); padding-bottom:var(--bar-b); }
+  #breakview{ margin:auto 0; padding-top:var(--bar-t); padding-bottom:var(--bar-b); }   /* odstep na gorny pasek (emoji nie wchodzi za linie) + wysrodkowanie jak #loading */
   body.compact{ --bar-t:22px; --bar-b:0px; }
   body.compact #topbar{ padding:5px 12px; }
   body.compact #topbar .tb-mark{ font-size:9px; }
@@ -2098,9 +2099,10 @@
         document.body.appendChild(ov);
         void ov.offsetWidth;                 // reflow, żeby tranzycja ruszyła od stanu początkowego
         ov.classList.add("in");              // murawa + piłka + tytuł wjeżdżają, zasłaniają ekran
-        await sleep(560);                    // ekran pełni zasłonięty
-        if (typeof atPeak === "function"){ try { atPeak(); } catch(e){ console.error("bumper atPeak:", e); } }
-        await sleep(300);                    // nowy ekran maluje pierwszą klatkę pod przykryciem
+        await sleep(600);                    // zasłona wjechała (sweep .55s)
+        await sleep(1100);                   // TYTUŁ TRZYMA — główny moment rozdziału (wydłużone)
+        if (typeof atPeak === "function"){ try { atPeak(); } catch(e){ console.error("bumper atPeak:", e); } }   // podmiana ekranu PÓŹNO, pod przykryciem
+        await sleep(240);                    // nowy ekran maluje pierwszą klatkę pod przykryciem
         ov.classList.add("out");             // murawa zjeżdża, odsłania nowy rozdział
         await sleep(520);
         if (ov.parentNode) ov.parentNode.removeChild(ov);
