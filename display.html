@@ -94,6 +94,24 @@
     0%   { transform:translateY(0) rotate(0deg); opacity:1; }
     100% { transform:translateY(110vh) rotate(720deg); opacity:.6; }
   }
+  /* ═══ PRZERYWNIK ROZDZIAŁU (chapterBumper) — murawa + piłka, dodane 2026-10-23 ═══
+     Pełnoekranowa warstwa przejścia (z-index 900, nad topbar/CRT). Zero bibliotek, zero wywołań zewnętrznych. */
+  #chbump{ position:fixed; inset:0; z-index:900; pointer-events:none; overflow:hidden; }
+  #chbump .chb-cover{ position:absolute; inset:-2px; overflow:hidden; transform:translateX(-106%);
+    background:repeating-linear-gradient(108deg,#1c7231 0 26px,#22853a 26px 52px); }
+  #chbump .chb-cover svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #chbump .chb-ball{ position:absolute; top:50%; left:-8%; transform:translate(-50%,-50%);
+    font-size:clamp(28px,6vw,64px); opacity:0; filter:drop-shadow(-18px 0 14px rgba(255,255,255,.45)); }
+  #chbump .chb-title{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:4; opacity:0;
+    font-family:'Press Start 2P',monospace; color:#e9c46a; font-size:clamp(14px,2.8vw,30px); letter-spacing:.04em;
+    text-align:center; line-height:1.3; white-space:nowrap; background:rgba(7,12,7,.92); padding:16px 26px;
+    border:2px solid rgba(233,196,106,.6); border-radius:7px; box-shadow:0 8px 24px rgba(0,0,0,.5); text-shadow:0 0 14px rgba(233,196,106,.45); }
+  #chbump.in .chb-cover{ transform:translateX(0); transition:transform .55s cubic-bezier(.5,0,.3,1); }
+  #chbump.in .chb-ball{ opacity:1; left:110%; transition:left .64s cubic-bezier(.3,.55,.5,1), opacity .08s; }
+  #chbump.in .chb-title{ opacity:1; transition:opacity .25s ease .42s; }
+  #chbump.out .chb-cover{ transform:translateX(106%); transition:transform .5s cubic-bezier(.6,0,.3,1); }
+  #chbump.out .chb-ball{ opacity:0; transition:opacity .1s; }
+  #chbump.out .chb-title{ opacity:0; transition:opacity .18s ease; }
   /* ── PRZEJSCIE "COMPILING THE STORIES" (po locku, przed tabela) ── */
   #loading { display:none; flex-direction:column; align-items:center; justify-content:center;
              width:100%; margin:auto 0; padding-inline:4vw; }
@@ -1359,10 +1377,10 @@
         if (rs >= 2){
           if (mode !== "radars"){ mode = "radars"; runFinale(room, { instant:true }); }
         } else if (rs === 1){
-          if (mode !== "summary"){ mode = "summary"; runSummary(room); }
+          if (mode !== "summary"){ mode = "summary"; chapterBumper("THE NIGHT IN NUMBERS", function(){ runSummary(room); }); }   // PRZERYWNIK -> summary
         } else {
           if (String(mode).indexOf("revealauto:") === 0) return;   // END w trakcie revealu -> NIE przerywaj; niech runda dokonczy sie sama, finale PO niej
-          if (mode !== "finale"){ mode = "finale"; runFinale(room); }
+          if (mode !== "finale"){ mode = "finale"; chapterBumper("FULL TIME", function(){ runFinale(room); }); }   // PRZERYWNIK -> finale
         }
       } else if (room.status === "reveal"){
         runRevealAuto(room);   // ETAP A: display prowadzi caly reveal sam (guard mode===tag w srodku); ignoruje reveal_step
@@ -1378,7 +1396,7 @@
         const want = "drafting:" + room.current_round;
         if (mode !== want){
           // (gwizdek startu usuniety — synteza za slaba; wroci gdy bedzie prawdziwy gwizdek CC0)
-          mode = want; runDrafting(room);
+          mode = want; chapterBumper("ROUND " + room.current_round, function(){ runDrafting(room); });   // PRZERYWNIK -> budowanie skladu (opener rundy)
         }
         else { refreshDrafting(room); }   // to samo mode -> tylko odswiez ptaszki
       }
@@ -1821,12 +1839,12 @@
         // dzieki czemu router NIE odtwarza revealu od nowa (to powodowalo blysk paska COMPILING).
         if (switched){
           mode = "table:" + room.current_round;
-          runTitlesTable(room);                                 // 3) normalne auto-przejscie do tabeli
+          chapterBumper("THE TABLE MOVES", function(){ runTitlesTable(room); });   // 3) PRZERYWNIK -> tabela (po zwyciezcy rundy)
         } else {
           // status nie jest juz "reveal" — czy host zakonczyl noc W TRAKCIE revealu?
           let ended = false;
           try { const { data: rr } = await db.from("rooms").select("status").eq("id", roomId).maybeSingle(); ended = !!(rr && rr.status === "ended"); } catch(e){}
-          if (ended){ mode = "finale"; runFinale(room); }        // END wcisniety w trakcie -> finale DOPIERO po pelnej rundzie (runda idzie do konca)
+          if (ended){ mode = "finale"; chapterBumper("FULL TIME", function(){ runFinale(room); }); }   // END w trakcie -> PRZERYWNIK -> finale (po pelnej rundzie)
           else { runTitlesTable(room); }                         // inny przypadek (drugi TV / odswiezenie)
         }
         // mode ZOSTAJE = tag: tabela stoi, router nie odpala revealu drugi raz;
@@ -2047,6 +2065,51 @@
         container.appendChild(piece);
       }
       setTimeout(function(){ if (container.parentNode) container.parentNode.removeChild(container); }, 4600);
+    }
+
+    // ═══ PRZERYWNIK ROZDZIAŁU — murawa z pełnymi liniami boiska + piłka + tytuł na plakietce (dodane 2026-10-23)
+    // Pełnoekranowe przejście między rozdziałami. Czysto lokalne (CSS/SVG), zero bibliotek i wywołań zewnętrznych.
+    // atPeak() wołane PRZY PEŁNYM ZASŁONIĘCIU ekranu — pod przykryciem podmieniamy ekran, potem murawa zjeżdża i odsłania nowy.
+    var CHB_PITCH =
+      '<svg viewBox="0 0 300 169" preserveAspectRatio="xMidYMid slice">'
+      + '<g fill="none" stroke="rgba(255,255,255,.34)" stroke-width="1.6">'
+      +   '<rect x="8" y="8" width="284" height="153" rx="2"/>'
+      +   '<line x1="150" y1="8" x2="150" y2="161"/>'
+      +   '<circle cx="150" cy="84.5" r="22"/>'
+      +   '<rect x="8" y="44.5" width="50" height="80"/>'
+      +   '<rect x="8" y="64.5" width="22" height="40"/>'
+      +   '<rect x="242" y="44.5" width="50" height="80"/>'
+      +   '<rect x="270" y="64.5" width="22" height="40"/>'
+      +   '<path d="M58 62.25 A28 28 0 0 1 58 106.75"/>'
+      +   '<path d="M242 62.25 A28 28 0 0 0 242 106.75"/>'
+      + '</g>'
+      + '<g fill="rgba(255,255,255,.42)">'
+      +   '<circle cx="150" cy="84.5" r="1.7"/>'
+      +   '<circle cx="41" cy="84.5" r="1.7"/>'
+      +   '<circle cx="259" cy="84.5" r="1.7"/>'
+      + '</g></svg>';
+    async function chapterBumper(title, atPeak){
+      try {
+        var ov = document.createElement("div"); ov.id = "chbump";
+        var cover = document.createElement("div"); cover.className = "chb-cover"; cover.innerHTML = CHB_PITCH;
+        var ball = document.createElement("div"); ball.className = "chb-ball"; ball.textContent = "⚽";
+        var t = document.createElement("div"); t.className = "chb-title"; t.textContent = title || "";
+        ov.appendChild(cover); ov.appendChild(ball); ov.appendChild(t);
+        document.body.appendChild(ov);
+        void ov.offsetWidth;                 // reflow, żeby tranzycja ruszyła od stanu początkowego
+        ov.classList.add("in");              // murawa + piłka + tytuł wjeżdżają, zasłaniają ekran
+        await sleep(560);                    // ekran pełni zasłonięty
+        if (typeof atPeak === "function"){ try { atPeak(); } catch(e){ console.error("bumper atPeak:", e); } }
+        await sleep(300);                    // nowy ekran maluje pierwszą klatkę pod przykryciem
+        ov.classList.add("out");             // murawa zjeżdża, odsłania nowy rozdział
+        await sleep(520);
+        if (ov.parentNode) ov.parentNode.removeChild(ov);
+      } catch(e){
+        console.error("chapterBumper:", e);
+        // awaryjnie: nawet gdy przejście padnie, uruchom dalszy ekran, żeby gra nie utknęła
+        if (typeof atPeak === "function"){ try { atPeak(); } catch(_e){} }
+        var old = document.getElementById("chbump"); if (old && old.parentNode) old.parentNode.removeChild(old);
+      }
     }
 
     async function finalePodium(ranked, skladyD, ileRund, instant){
