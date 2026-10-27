@@ -367,6 +367,41 @@
     background:rgba(40,0,32,.85) !important; animation:xadStoryPop .42s ease-out; }
   @keyframes xadStoryPop { 0%{transform:scale(1)} 40%{transform:scale(1.16)} 100%{transform:scale(1)} }
   @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+
+  /* ═══ REVEAL FX (Akty 1–4), dodane 2026-10-27 — DODATKI (CSS/synteza), zero plikow. Aktywne gdy XAD_FX=true ═══ */
+  /* Akt 1: wejscie boiska (rysowanie + formacja + reflektor + pilka) */
+  .tv-pitch { transition:clip-path .55s ease; }
+  .tv-pitch.xad-pre { clip-path:inset(0 0 100% 0); }
+  .tv-pitch::before { transform-origin:center; transition:transform .45s ease .16s; }
+  .tv-pitch.xad-pre::before { transform:scaleX(0); }
+  .tv-pitch::after { transition:transform .5s cubic-bezier(.2,1.3,.4,1) .26s; }
+  .tv-pitch.xad-pre::after { transform:translate(-50%,-50%) scale(0); }
+  .tv-penalty { transform-origin:center bottom; transition:transform .4s ease .30s; }
+  .tv-sixyard { transform-origin:center bottom; transition:transform .4s ease .34s; }
+  .tv-pitch.xad-pre .tv-penalty { transform:translateX(-50%) scaleX(0); }
+  .tv-pitch.xad-pre .tv-sixyard { transform:translateX(-50%) scaleX(0); }
+  .xad-flood { position:absolute; inset:0; z-index:7; pointer-events:none; overflow:hidden; }
+  .xad-flood>i { position:absolute; top:-30%; left:-45%; width:55%; height:160%; transform:skewX(-13deg);
+    background:linear-gradient(90deg,transparent,rgba(233,196,106,.16),transparent); animation:xadFlood 1.5s ease-in-out .05s 1; }
+  @keyframes xadFlood { 0%{left:-45%;opacity:0} 20%{opacity:1} 80%{opacity:1} 100%{left:120%;opacity:0} }
+  .xad-dball { position:absolute; left:50%; top:-12%; z-index:8; transform:translate(-50%,-50%); opacity:0;
+    font-size:7cqw; filter:drop-shadow(0 6px 8px rgba(0,0,0,.5)); }
+  /* Akt 2: blysk nazwy (flar + podkreslenie) — nad istniejacym POP */
+  .story-name { position:relative; }
+  .sn-flare { position:absolute; top:-10%; bottom:-10%; left:-30%; width:42%; pointer-events:none; opacity:0; transform:skewX(-18deg);
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); }
+  .story-name.pop .sn-flare { animation:snFlare .6s ease-out .1s; }
+  @keyframes snFlare { 0%{left:-30%;opacity:0} 28%{opacity:1} 100%{left:120%;opacity:0} }
+  .sn-uline { position:absolute; left:0; bottom:-.28em; height:3px; width:100%; transform:scaleX(0); transform-origin:left; border-radius:2px;
+    background:linear-gradient(90deg,#e9c46a,rgba(233,196,106,.15)); box-shadow:0 0 10px rgba(233,196,106,.7); }
+  .story-name.arch .sn-uline { background:linear-gradient(90deg,#ff7ae0,rgba(255,122,224,.15)); box-shadow:0 0 10px rgba(255,122,224,.7); }
+  .story-name.pop .sn-uline { animation:snUline .5s ease-out .18s forwards; }
+  @keyframes snUline { to{transform:scaleX(1)} }
+  /* Akt 4: smuga za pilka + etykiety pozycji */
+  .story-ball.xad-trail i { filter:drop-shadow(-10px 0 10px rgba(255,215,64,.55)) drop-shadow(0 0 10px rgba(255,255,255,.7)); }
+  .xad-poslabel { position:absolute; z-index:30; transform:translate(-50%,-50%) scale(.5); opacity:0; pointer-events:none;
+    font-family:var(--px); font-size:2.6cqw; color:#0a1109; background:#e9c46a; border-radius:4px; padding:2px 5px; white-space:nowrap; }
+  .xad-poslabel.on { opacity:1; transform:translate(-50%,-50%) scale(1); transition:opacity .2s, transform .3s cubic-bezier(.2,1.5,.4,1); }
   .story-ball { position:absolute; width:26px; height:26px; z-index:30; pointer-events:none;
                 display:flex; align-items:center; justify-content:center; transition:opacity .15s ease; }
   .story-ball i { font-size:24px; line-height:1; display:block; font-style:normal;
@@ -743,11 +778,12 @@
     let sndPrevDeadline = null, sndLastBeepSec = null; // stan dzwieku zegara
 
     // ── DŹWIĘK: synteza Web Audio (jak solo Quick Quiz) — zero plikow, zero licencji, zero zewnetrznych zaleznosci ──
-    let audioCtx = null;
+    let audioCtx = null, xadNoise = null;
     function ensureAudio(){
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === "suspended") audioCtx.resume();
+        if (audioCtx && !xadNoise){ const L = Math.floor(audioCtx.sampleRate * 0.8); xadNoise = audioCtx.createBuffer(1, L, audioCtx.sampleRate); const d = xadNoise.getChannelData(0); for (let i=0;i<L;i++) d[i] = Math.random()*2 - 1; }   // bufor bialego szumu dla REVEAL FX
       } catch(e){}
     }
     function tone(freq, dur, vol){
@@ -767,6 +803,33 @@
     function soundBeep(sec){ tone(sec<=5 ? 880 : 660, 0.08, 0.08); }                                    // pikanie ostatnich 10s (ostrzej pod 5s)
     function soundEnd(){ tone(440,0.30,0.10); }                                                          // koniec czasu
     // (odblokowanie audio scalone wyzej: ensureAudio + priming SFX + chowanie promptu)
+
+    // ── REVEAL FX (Akty 1–4), dodane 2026-10-27: DODATKI, czysta synteza, zero plikow; graja TYLKO po odblokowaniu audio (jak tone()) ──
+    const XAD_FX = true;   // false => powrot do starego revealu (boisko wskakuje gotowe, bez nowych dzwiekow) — guard wszedzie
+    function fxOn(){ return audioCtx && audioCtx.state === "running"; }
+    function fxWhoosh(){ if(!fxOn()||!xadNoise) return; try{ const s=audioCtx.createBufferSource(); s.buffer=xadNoise; const f=audioCtx.createBiquadFilter(), g=audioCtx.createGain(); s.connect(f);f.connect(g);g.connect(audioCtx.destination); f.type="lowpass"; const t0=audioCtx.currentTime;
+      f.frequency.setValueAtTime(300,t0); f.frequency.exponentialRampToValueAtTime(3600,t0+0.4); f.frequency.exponentialRampToValueAtTime(500,t0+0.85);
+      g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.09,t0+0.12); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.9); s.start(t0); s.stop(t0+0.95);}catch(e){} }
+    function fxHum(){ if(!fxOn()) return; try{ [84,126].forEach(function(fr,i){ const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type="sawtooth"; o.frequency.value=fr; o.connect(g); g.connect(audioCtx.destination); const t0=audioCtx.currentTime;
+      g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(i?0.013:0.02,t0+0.4); g.gain.exponentialRampToValueAtTime(0.0001,t0+2.3); o.start(t0); o.stop(t0+2.4); }); }catch(e){} }
+    function fxEtick(step){ if(!fxOn()||!xadNoise) return; try{ const s=audioCtx.createBufferSource(); s.buffer=xadNoise; const f=audioCtx.createBiquadFilter(), g=audioCtx.createGain(); s.connect(f);f.connect(g);g.connect(audioCtx.destination); f.type="bandpass"; f.frequency.value=1400+step*260; f.Q.value=1.2; const t0=audioCtx.currentTime;
+      g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.055,t0+0.001); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.05); s.start(t0); s.stop(t0+0.06);}catch(e){} }
+    function fxThud(){ if(!fxOn()) return; try{ const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type="sine"; o.connect(g); g.connect(audioCtx.destination); const t0=audioCtx.currentTime;
+      o.frequency.setValueAtTime(150,t0); o.frequency.exponentialRampToValueAtTime(55,t0+0.14); g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.15,t0+0.005); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.2); o.start(t0); o.stop(t0+0.22);}catch(e){} }
+    function fxImpact(){ if(!fxOn()) return; try{ const t0=audioCtx.currentTime;
+      const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type="sine"; o.connect(g); g.connect(audioCtx.destination); o.frequency.setValueAtTime(170,t0); o.frequency.exponentialRampToValueAtTime(62,t0+0.16);
+      g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.16,t0+0.005); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.22); o.start(t0); o.stop(t0+0.24);
+      const o2=audioCtx.createOscillator(), g2=audioCtx.createGain(); o2.type="triangle"; o2.connect(g2); g2.connect(audioCtx.destination); o2.frequency.setValueAtTime(900,t0); o2.frequency.exponentialRampToValueAtTime(520,t0+0.05);
+      g2.gain.setValueAtTime(0.0001,t0); g2.gain.exponentialRampToValueAtTime(0.055,t0+0.003); g2.gain.exponentialRampToValueAtTime(0.0001,t0+0.07); o2.start(t0); o2.stop(t0+0.08);}catch(e){} }
+    function fxMatrix(){ if(!fxOn()||!xadNoise) return; try{ const t0=audioCtx.currentTime;
+      const ns=audioCtx.createBufferSource(); ns.buffer=xadNoise; const hf=audioCtx.createBiquadFilter(), gn=audioCtx.createGain(); ns.connect(hf);hf.connect(gn);gn.connect(audioCtx.destination); hf.type="highpass"; hf.frequency.value=3200+(Math.random()*800-400); hf.Q.value=0.6;
+      gn.gain.setValueAtTime(0.0001,t0); gn.gain.exponentialRampToValueAtTime(0.05,t0+0.0006); gn.gain.exponentialRampToValueAtTime(0.0001,t0+0.008); ns.start(t0); ns.stop(t0+0.014);
+      const o=audioCtx.createOscillator(), go=audioCtx.createGain(); o.type="square"; o.connect(go); go.connect(audioCtx.destination); const f=2800+(Math.random()*400-200); o.frequency.setValueAtTime(f,t0); o.frequency.exponentialRampToValueAtTime(f*0.6,t0+0.007);
+      go.gain.setValueAtTime(0.0001,t0); go.gain.exponentialRampToValueAtTime(0.045,t0+0.0008); go.gain.exponentialRampToValueAtTime(0.0001,t0+0.007); o.start(t0); o.stop(t0+0.01);}catch(e){} }
+    function fxKick(step){ if(!fxOn()) return; try{ const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type="sine"; o.connect(g); g.connect(audioCtx.destination); const t0=audioCtx.currentTime; const f=180+step*70;
+      o.frequency.setValueAtTime(f,t0); o.frequency.exponentialRampToValueAtTime(f*0.55,t0+0.12); g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.13,t0+0.004); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.16); o.start(t0); o.stop(t0+0.18);}catch(e){} }
+    function fxSting(){ if(!fxOn()) return; try{ [523,659,784].forEach(function(fr,i){ const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type="triangle"; o.frequency.value=fr; o.connect(g); g.connect(audioCtx.destination); const t0=audioCtx.currentTime+i*0.04;
+      g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.03,t0+0.05); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.8); o.start(t0); o.stop(t0+0.85); }); }catch(e){} }
 
     function tickDraftTimer(){
       const box = document.getElementById("dr-timer");
@@ -905,24 +968,84 @@
       await sleep(850);                                    // cisza: werdykt siada, dopiero potem ruch
       const ball = document.createElement("div");
       ball.className = "story-ball"; ball.innerHTML = "<i>\u26bd</i>";
+      if (XAD_FX) ball.classList.add("xad-trail");   // AKT 4: smuga za pilka
       pitch.appendChild(ball);
       ball.style.opacity = "0"; ball.style.left = pts[0].x+"px"; ball.style.top = pts[0].y+"px";
       ball.style.transform = "translate(-50%,-50%)";
       await sleep(40);
       ball.style.opacity = "1";
       pts[0].dot.classList.remove("story-dormant"); pts[0].dot.classList.add("story-lit");
+      if (XAD_FX){ fxKick(0); xadPosLabel(pitch, pts[0].dot); }   // AKT 4: kopniecie + etykieta pozycji
       await sleep(180);
       for (let i=1; i<pts.length; i++){
         await hop(ball, pts[i-1].x, pts[i-1].y, pts[i].x, pts[i].y, 300);
         pts[i].dot.classList.remove("story-dormant"); pts[i].dot.classList.add("story-lit");
+        if (XAD_FX){ fxKick(i); xadPosLabel(pitch, pts[i].dot); }   // AKT 4: kopniecie (rosnaca nuta) + etykieta
         await sleep(170);
       }
       await sleep(300);
       ball.style.opacity = "0";
       await sleep(320);
       ball.remove();
+      if (XAD_FX) fxSting();                               // AKT 4: sting gdy rdzen swieci
       await sleep(1100);                                   // sam rdzen swieci = "oto dowody"
       all.forEach(function(d){ d.classList.remove("story-dormant"); });
+    }
+
+    // AKT 4 (dodatek): etykieta pozycji ponad zapalonym zawodnikiem
+    function xadPosLabel(pitch, dot){
+      try {
+        const pr = pitch.getBoundingClientRect(), c = dot.querySelector(".pcircle").getBoundingClientRect();
+        const x = c.left - pr.left + c.width/2, y = c.top - pr.top + c.height/2;
+        const pos = (dot.querySelector(".pcircle").textContent || "").trim();
+        if (!pos) return;
+        const l = document.createElement("div"); l.className = "xad-poslabel"; l.textContent = pos;
+        l.style.left = x + "px"; l.style.top = (y - c.height*0.78) + "px"; pitch.appendChild(l);
+        requestAnimationFrame(function(){ l.classList.add("on"); });
+        setTimeout(function(){ l.classList.remove("on"); setTimeout(function(){ if (l.parentNode) l.remove(); }, 260); }, 850);
+      } catch(e){}
+    }
+
+    // AKT 1 (dodatek): wejscie boiska — rysuje sie + formacja wlatuje + reflektor + pilka na srodek.
+    // Czysto wizualne; dzwiek gra tylko po odblokowaniu audio. Po sobie zostawia boisko w stanie normalnym
+    // (czysci inline style zawodnikow, zeby storyBall moglo normalnie przyciemniac/zapalac).
+    async function xadPitchEntrance(card){
+      const pitch = card.querySelector(".tv-pitch"); if (!pitch) return;
+      const dots = Array.prototype.slice.call(pitch.querySelectorAll(".pdot"));
+      const compact = (typeof isCompact === "function") ? isCompact() : false;
+      function grpOf(d){ return d.classList.contains("grp-gk")?0:d.classList.contains("grp-df")?1:d.classList.contains("grp-mf")?2:3; }
+      // 1) ukryj boisko (clip) + zawodnikow (offset+scale); dolóż reflektor i pilke
+      pitch.classList.add("xad-pre");
+      dots.forEach(function(d){
+        const g = grpOf(d); let dx = 0, dy = 0;
+        if (!compact){ const L = parseFloat(d.style.left) || 50; dx = (g===1) ? (L < 50 ? -18 : 18) : 0; dy = (g===0) ? 18 : (g>=2 ? -16 : 0); }
+        d.style.transition = "none";
+        d.style.transform = "translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px)) scale(.12)";
+        d.style.opacity = "0";
+      });
+      const flood = document.createElement("div"); flood.className = "xad-flood"; flood.innerHTML = "<i></i>"; pitch.appendChild(flood);
+      const dball = document.createElement("div"); dball.className = "xad-dball"; dball.textContent = "⚽"; pitch.appendChild(dball);
+      void pitch.offsetWidth;                              // reflow w stanie xad-pre, zeby tranzycje ruszyly
+      // 2) rysuj boisko + dzwiek
+      pitch.classList.remove("xad-pre");
+      fxWhoosh(); setTimeout(fxHum, 260);
+      // 3) formacja wlatuje grupami (bramkarz -> obrona -> pomoc -> atak)
+      const base = [820, 980, 1200, 1420], byGrp = [[],[],[],[]];
+      dots.forEach(function(d){ byGrp[grpOf(d)].push(d); });
+      byGrp.forEach(function(arr, gi){ arr.forEach(function(d, k){ setTimeout(function(){
+        d.style.transition = "opacity .28s ease, transform .42s cubic-bezier(.2,1.5,.35,1)";
+        d.style.transform = "translate(-50%,-50%) scale(1)"; d.style.opacity = "1"; fxEtick(gi);
+      }, base[gi] + k*60); }); });
+      // 4) pilka na srodek boiska
+      setTimeout(function(){ dball.style.opacity = "1"; dball.style.top = "-12%"; void dball.offsetWidth; dball.style.transition = "top .32s cubic-bezier(.5,0,.9,1)"; dball.style.top = "48%"; }, 1700);
+      setTimeout(function(){ fxThud(); dball.style.transition = "top .12s ease-out"; dball.style.top = "42%"; }, 2020);
+      setTimeout(function(){ dball.style.transition = "top .1s ease-in"; dball.style.top = "48%"; }, 2140);
+      setTimeout(function(){ dball.style.transition = "opacity .4s ease"; dball.style.opacity = "0"; }, 2500);
+      await sleep(2300);
+      // sprzatanie: usun reflektor/pilke, wyczysc inline style zawodnikow (zeby story-dormant dzialalo)
+      if (flood && flood.parentNode) flood.remove();
+      setTimeout(function(){ if (dball && dball.parentNode) dball.remove(); }, 400);
+      dots.forEach(function(d){ d.style.opacity = ""; d.style.transform = ""; d.style.transition = ""; });
     }
 
     function showOnly(id){
@@ -1617,9 +1740,11 @@
         // 1) miejsce + nazwa + boisko wjezdzaja
         await sleep(60);
         card.classList.add("shown");
-        // 2) boisko usiada -> tytul POP (glow+bounce jak solo)
-        await sleep(1400);
-        if (st){ const nm = card.querySelector("#c-name"); if (nm) nm.classList.add("pop"); }
+        // AKT 1 (dodatek): wejscie boiska (rysuje sie + formacja wlatuje + reflektor + pilka). XAD_FX=false -> stare "wskakuje gotowe".
+        if (XAD_FX){ try { await xadPitchEntrance(card); } catch(e){ console.error("xadPitchEntrance:", e); await sleep(1400); } }
+        else { await sleep(1400); }
+        // 2) boisko usiada -> tytul POP (glow+bounce jak solo) + AKT 2 (dodatek): flar + podkreslenie + impact
+        if (st){ const nm = card.querySelector("#c-name"); if (nm){ if (XAD_FX) nm.insertAdjacentHTML("beforeend", '<span class="sn-flare"></span><span class="sn-uline"></span>'); nm.classList.add("pop"); if (XAD_FX) fxImpact(); } }
         // 3) podtytul pisany jak teletext
         await sleep(700);
         if (st && st.desc) await typeOut(card.querySelector("#c-desc"), st.desc);
@@ -1884,6 +2009,7 @@
       node.appendChild(caret);
       for (let i=0; i<text.length; i++){
         caret.insertAdjacentText("beforebegin", text[i]);
+        if (XAD_FX && text[i] !== " " && (i % 3 === 0)) fxMatrix();   // AKT 3: dzwiek pisania "matrix" (co 3. nie-spacja)
         await sleep(perChar);
       }
       await sleep(500);
