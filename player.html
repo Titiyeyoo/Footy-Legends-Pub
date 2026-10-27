@@ -91,7 +91,8 @@
 
   <div id="fld-locked" style="display:none;text-align:center;padding:60px 20px">
     <div style="color:#39d353;font-family:var(--px);font-size:14px;letter-spacing:1px;line-height:2">✓ XI LOCKED</div>
-    <div style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:14px">Waiting for the reveal<br>on the big screen…</div>
+    <div id="fld-story" style="display:none;max-width:340px;margin:20px auto 0;padding:16px;border:1px solid rgba(233,196,106,.25);border-radius:10px;background:rgba(15,23,16,.5)"></div>
+    <div id="fld-locked-sub" style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:14px">Waiting for the reveal<br>on the big screen…</div>
     <!-- KROK 1 READY: widoczne TYLKO miedzy rundami (status=table), tylko dla zalockowanych -->
     <div id="ready-box" style="display:none;margin-top:34px">
       <div style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2">READY FOR NEXT ROUND?</div>
@@ -164,6 +165,7 @@
   let TIMER_SECONDS = 90;     // wspolny limit draftu, z pokoju (brak -> 90)
   let deadlineMs = null;      // absolutny moment konca (start = najwczesniejszy wpis rundy + TIMER_SECONDS)
   let autoLockFired = false;  // zabezpieczenie: auto-lock w zerze tylko raz na runde
+  let myStory = null;         // AKT A: historia TEGO gracza (z locku) do pokazania na telefonie w revealu
 
   // --- ROLL: nieaktywny w lobby, aktywny po STARCIE ---
   function lockRoll(){
@@ -254,7 +256,11 @@
           if (roundId){
             const { data: mine0 } = await sb.from("entries").select("team_id")
               .eq("round_id", roundId).eq("team_id", TEAM_ID).maybeSingle();
-            if (mine0) showLocked();          // ustawia locked=true + ekran "XI LOCKED"
+            if (mine0){
+              // po ODSWIEZENIU w trakcie revealu myStory znika (zyje w pamieci) -> odtworz z serwera (osobny, bezpieczny odczyt)
+              if (!myStory){ try { const { data: t0 } = await sb.from("entries").select("title").eq("round_id", roundId).eq("team_id", TEAM_ID).maybeSingle(); if (t0 && t0.title) myStory = parseStory(t0.title); } catch(_e){} }
+              showLocked();          // ustawia locked=true + ekran "XI LOCKED"
+            }
           }
         } catch(e){}
       }
@@ -264,8 +270,9 @@
         document.getElementById("fld-locked").style.display = "none";
         document.getElementById("fld-reveal").style.display = "";
         try { window.scrollTo(0,0); } catch(e){}
-      } else if (r.status === "table"){
-        showReady();          // KROK 1: READY dopiero MIEDZY rundami (nie w trakcie revealu — sala oglada show)
+      } else {
+        renderStoryFull();    // AKT A: pelna historia gracza na telefonie w trakcie revealu/tabeli
+        if (r.status === "table") showReady();   // KROK 1: READY dopiero MIEDZY rundami (nie w trakcie revealu — sala oglada show)
       }
       return;
     }
@@ -313,10 +320,44 @@
     try { window.scrollTo(0,0); } catch(e){}
   }
 
+  // ── AKT A: historia gracza na telefonie (teaser po locku, pelna w revealu). Zero punktow. ──
+  function _esc(s){ try { return window.escapeHtml(s); } catch(e){ return ("" + (s == null ? "" : s)); } }
+  function parseStory(x){ try { return x ? JSON.parse(x) : null; } catch(e){ return null; } }
+  function storyReal(st){ return !!(st && (st.coreKind === "narr" || st.coreKind === "arch") && st.name); }
+  function renderStoryTeaser(){
+    const box = document.getElementById("fld-story"); if (!box) return;
+    if (storyReal(myStory)){   // teaser TYLKO dla prawdziwej historii; MIXED bez teasera
+      box.style.display = "";
+      box.innerHTML = '<div style="color:#e9c46a;font-family:\'Press Start 2P\',monospace;font-size:9px;letter-spacing:1px;line-height:1.9">⚽ A STORY WAS FOUND<br>IN YOUR XI 👀</div>'
+        + '<div style="color:#8a8576;font-size:12px;letter-spacing:1px;margin-top:10px">Watch the big screen…</div>';
+    } else { box.style.display = "none"; box.innerHTML = ""; }
+  }
+  function renderStoryFull(){
+    const box = document.getElementById("fld-story"); if (!box) return;
+    const sub = document.getElementById("fld-locked-sub"); if (sub) sub.style.display = "none";   // "waiting" ustepuje historii
+    if (!myStory){ box.style.display = "none"; return; }
+    const real = storyReal(myStory);
+    const label = real ? "YOUR STORY" : "YOUR XI";
+    const nameColor = (myStory.coreKind === "arch") ? "#ff7ae0" : "#e9c46a";
+    const emoji = myStory.emoji ? (_esc(myStory.emoji) + " ") : "";
+    const nameText = myStory.name || (real ? "" : "MIXED XI");
+    const descText = myStory.desc || (real ? "" : "No era, no theme — just your gut.");
+    const rest = (real && myStory.rest) ? ('<div style="color:#7f8a7c;font-size:12px;line-height:1.5;margin-top:10px">' + _esc(myStory.rest) + '</div>') : "";
+    box.style.display = "";
+    box.innerHTML =
+      '<div style="color:#8a8576;font-family:\'Press Start 2P\',monospace;font-size:8px;letter-spacing:2px">' + label + '</div>'
+      + '<div style="color:' + nameColor + ';font-family:\'Press Start 2P\',monospace;font-size:13px;letter-spacing:1px;line-height:1.5;margin-top:12px;text-shadow:0 0 12px rgba(233,196,106,.35)">' + emoji + _esc(nameText) + '</div>'
+      + '<div style="color:#cfe9d4;font-size:14px;line-height:1.5;margin-top:12px">' + _esc(descText) + '</div>'
+      + rest;
+  }
+
   // ── KROK 1 READY: sygnal gotowosci (BEZ auto-startu rundy — host nadal pcha SKIP/NEXT ROUND) ──
   let readyDone = false;
   function resetReadyUI(){                 // nowa runda -> przycisk znowu aktywny (zero falszywego "✓ READY")
     readyDone = false;
+    myStory = null;                        // AKT A: nowa runda -> wyczysc historie z poprzedniej
+    const _fs = document.getElementById("fld-story"); if (_fs){ _fs.style.display = "none"; _fs.innerHTML = ""; }
+    const _fsub = document.getElementById("fld-locked-sub"); if (_fsub) _fsub.style.display = "";   // przywroc "waiting" na nowa runde
     const box = document.getElementById("ready-box");
     const btn = document.getElementById("ready-btn");
     const done = document.getElementById("ready-done");
@@ -467,6 +508,7 @@
             if (b && typeof b.story === "number") st.w2 = b.story;
           } catch(e){}
           title = JSON.stringify(st);
+          myStory = st;   // AKT A: zachowaj historie gracza do pokazania na telefonie
           // zapamietaj narracje tego gracza (tylko prawdziwe historie, nie archetypy/mixed) -> anty-powtorka
           try { if (st.coreKind === "narr" && st.key) pushRecentStory(st.key); } catch(e){}
         }
@@ -477,6 +519,7 @@
     locked = true;     // ten telefon zalockowal — reveal ma go zostawic na "XI LOCKED"
     document.getElementById("xad-draft").style.display = "none";
     document.getElementById("fld-locked").style.display = "";
+    renderStoryTeaser();   // AKT A: teaser "a story was found" (tylko prawdziwa historia; MIXED bez)
     try { new Audio("sfx-lock.mp3").play().catch(function(){}); } catch(e){}   // miekki confirm (swiezy lock)
     try { if (navigator.vibrate) navigator.vibrate([60,50,130]); } catch(e){}   // wyrazny "zapisane" buzz (Android; iPhone nie ma)
     try { window.scrollTo(0,0); } catch(e){}
