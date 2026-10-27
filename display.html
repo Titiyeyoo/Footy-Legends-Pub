@@ -402,6 +402,19 @@
   .xad-poslabel { position:absolute; z-index:30; transform:translate(-50%,-50%) scale(.5); opacity:0; pointer-events:none;
     font-family:var(--px); font-size:2.6cqw; color:#0a1109; background:#e9c46a; border-radius:4px; padding:2px 5px; white-space:nowrap; }
   .xad-poslabel.on { opacity:1; transform:translate(-50%,-50%) scale(1); transition:opacity .2s, transform .3s cubic-bezier(.2,1.5,.4,1); }
+
+  /* ═══ WEJSCIE W GRE (start rundy 1 z lobby), dodane 2026-10-27 — logo + napis, raz na wieczor ═══ */
+  #xad-intro { position:fixed; inset:0; z-index:950; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3.2vh;
+    background:radial-gradient(120% 100% at 50% 42%,#0c1b11,rgba(4,8,5,0) 70%),#04070a; opacity:0; pointer-events:none; }
+  #xad-intro.show { opacity:1; transition:opacity .4s ease; }
+  #xad-intro.out  { opacity:0; transition:opacity .55s ease; }
+  #xad-intro .xi-logo { width:min(42vh,420px); height:auto; opacity:0; transform:scale(.8); filter:drop-shadow(0 0 0 rgba(233,196,106,0)); }
+  #xad-intro.logo-in .xi-logo { opacity:1; transform:scale(1); filter:drop-shadow(0 0 26px rgba(233,196,106,.5));
+    transition:opacity .6s ease, transform .7s cubic-bezier(.2,1.2,.3,1), filter .7s ease; }
+  #xad-intro .xi-tagwrap { text-align:center; opacity:0; transform:translateY(10px); }
+  #xad-intro.tag-in .xi-tagwrap { opacity:1; transform:none; transition:opacity .5s ease, transform .5s ease; }
+  #xad-intro .xi-big { font-family:var(--px); color:var(--gold); font-size:clamp(14px,3vw,30px); letter-spacing:.12em; text-shadow:0 0 18px rgba(233,196,106,.5); }
+  #xad-intro .xi-sub { font-family:var(--px); color:var(--dim,#8a8576); font-size:clamp(8px,1.4vw,13px); letter-spacing:.2em; margin-top:2.2vh; }
   .story-ball { position:absolute; width:26px; height:26px; z-index:30; pointer-events:none;
                 display:flex; align-items:center; justify-content:center; transition:opacity .15s ease; }
   .story-ball i { font-size:24px; line-height:1; display:block; font-style:normal;
@@ -1536,7 +1549,10 @@
         const want = "drafting:" + room.current_round;
         if (mode !== want){
           // (gwizdek startu usuniety — synteza za slaba; wroci gdy bedzie prawdziwy gwizdek CC0)
-          mode = want; chapterBumper("ROUND " + room.current_round, function(){ runDrafting(room); });   // PRZERYWNIK -> budowanie skladu (opener rundy)
+          const firstStart = (XAD_FX && room.current_round === 1 && (mode === "lobby" || mode === "connect"));   // WEJSCIE W GRE: tylko start rundy 1 z lobby
+          mode = want;
+          if (firstStart){ gameStartIntro().then(function(){ chapterBumper("ROUND " + room.current_round, function(){ runDrafting(room); }); }); }   // wejscie -> ROUND 1 -> draft
+          else { chapterBumper("ROUND " + room.current_round, function(){ runDrafting(room); }); }   // PRZERYWNIK -> budowanie skladu (opener rundy)
         }
         else { refreshDrafting(room); }   // to samo mode -> tylko odswiez ptaszki
       }
@@ -2260,6 +2276,33 @@
         // awaryjnie: nawet gdy przejście padnie, uruchom dalszy ekran, żeby gra nie utknęła
         if (typeof atPeak === "function"){ try { atPeak(); } catch(_e){} }
         var old = document.getElementById("chbump"); if (old && old.parentNode) old.parentNode.removeChild(old);
+      }
+    }
+
+    // WEJSCIE W GRE (dodane 2026-10-27): raz, na starcie gry (runda 1 z lobby). Logo + napis KICK OFF / ROLL THE SQUAD.
+    // Pod XAD_FX. Dzwiek gra tylko po odblokowaniu audio. try/catch -> nigdy nie blokuje wejscia do draftu.
+    async function gameStartIntro(){
+      try {
+        var ov = document.createElement("div"); ov.id = "xad-intro";
+        ov.innerHTML = '<img class="xi-logo" src="xad-logo-glow.png" alt="">'
+                     + '<div class="xi-tagwrap"><div class="xi-big">KICK OFF</div><div class="xi-sub">ROLL THE SQUAD</div></div>';
+        document.body.appendChild(ov);
+        void ov.offsetWidth;
+        ov.classList.add("show");                                    // przyciemnienie wchodzi
+        if (typeof fxWhoosh === "function") fxWhoosh();
+        await sleep(250);
+        ov.classList.add("logo-in");                                 // logo bloom
+        if (typeof fxHum === "function") setTimeout(fxHum, 150);
+        if (typeof fxSting === "function") setTimeout(fxSting, 260); // miekki swell na logo (reuse)
+        await sleep(700);
+        ov.classList.add("tag-in");                                  // napis
+        await sleep(1800);
+        ov.classList.add("out");
+        await sleep(560);
+        if (ov.parentNode) ov.parentNode.removeChild(ov);
+      } catch(e){
+        console.error("gameStartIntro:", e);
+        var old = document.getElementById("xad-intro"); if (old && old.parentNode) old.parentNode.removeChild(old);
       }
     }
 
