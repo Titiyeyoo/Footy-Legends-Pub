@@ -1024,7 +1024,6 @@
         d.style.opacity = "0";
       });
       const flood = document.createElement("div"); flood.className = "xad-flood"; flood.innerHTML = "<i></i>"; pitch.appendChild(flood);
-      const dball = document.createElement("div"); dball.className = "xad-dball"; dball.textContent = "⚽"; pitch.appendChild(dball);
       void pitch.offsetWidth;                              // reflow w stanie xad-pre, zeby tranzycje ruszyly
       // 2) rysuj boisko + dzwiek
       pitch.classList.remove("xad-pre");
@@ -1036,15 +1035,10 @@
         d.style.transition = "opacity .28s ease, transform .42s cubic-bezier(.2,1.5,.35,1)";
         d.style.transform = "translate(-50%,-50%) scale(1)"; d.style.opacity = "1"; fxEtick(gi);
       }, base[gi] + k*60); }); });
-      // 4) pilka na srodek boiska
-      setTimeout(function(){ dball.style.opacity = "1"; dball.style.top = "-12%"; void dball.offsetWidth; dball.style.transition = "top .32s cubic-bezier(.5,0,.9,1)"; dball.style.top = "48%"; }, 1700);
-      setTimeout(function(){ fxThud(); dball.style.transition = "top .12s ease-out"; dball.style.top = "42%"; }, 2020);
-      setTimeout(function(){ dball.style.transition = "top .1s ease-in"; dball.style.top = "48%"; }, 2140);
-      setTimeout(function(){ dball.style.transition = "opacity .4s ease"; dball.style.opacity = "0"; }, 2500);
-      await sleep(2300);
-      // sprzatanie: usun reflektor/pilke, wyczysc inline style zawodnikow (zeby story-dormant dzialalo)
+      // (piłka opadajaca usunieta 2026-10-27 — niepotrzebna; zostaje rysowanie boiska + formacja + reflektor)
+      await sleep(2000);
+      // sprzatanie: usun reflektor, wyczysc inline style zawodnikow (zeby story-dormant dzialalo normalnie)
       if (flood && flood.parentNode) flood.remove();
-      setTimeout(function(){ if (dball && dball.parentNode) dball.remove(); }, 400);
       dots.forEach(function(d){ d.style.opacity = ""; d.style.transform = ""; d.style.transition = ""; });
     }
 
@@ -1958,9 +1952,16 @@
         if (mode !== tag) return;                               // przerwane (np. host skoczyl do tabeli)
         const D = await roundData(room);
         const show = showCountFor(D.ranked.length);             // ile kart (TOP 3 albo mniej przy <=3)
+        // PRZERYWNIK tabela->reveal (dodane 2026-10-27): napis dynamiczny — gdy CALY top ma historie -> "STORIES IN MOTION", inaczej (ktos MIXED) -> "INSIDE THE TOP 3"
+        if (XAD_FX){
+          let allStories = show > 0;
+          for (let i = 0; i < show; i++){ const e = D.ranked[i]; const stt = e ? story(e.entry) : null; if (!(stt && stt.coreKind && stt.coreKind !== "mixed")){ allStories = false; break; } }
+          try { await chapterBumper(allStories ? "STORIES IN MOTION" : "INSIDE THE TOP 3", function(){ try { showOnly("roundview"); const cs = el("cardstage"); if (cs) cs.innerHTML = ""; } catch(_e){} }); } catch(e){ console.error("reveal bumper:", e); }
+          if (mode !== tag) return;
+        }
         for (let s = 1; s <= show; s++){
           if (mode !== tag) return;
-          await sleep(REVEAL_GAP);
+          if (!(XAD_FX && s === 1)) await sleep(REVEAL_GAP);     // 1. karta tuz po przerywniku (bez dodatkowej czarnej przerwy); kolejne z normalnym odstepem
           if (mode !== tag) return;
           await runCard(room, s);                               // 2) karta po karcie, od dolu w gore (zwyciezca ostatni)
         }
