@@ -2122,9 +2122,9 @@
         void ov.offsetWidth;                 // reflow, żeby tranzycja ruszyła od stanu początkowego
         ov.classList.add("in");              // murawa + piłka + tytuł wjeżdżają, zasłaniają ekran
         await sleep(600);                    // zasłona wjechała (sweep .55s)
-        await sleep(500);                    // tytuł trzyma (część)
-        if (typeof atPeak === "function"){ try { atPeak(); } catch(e){ console.error("bumper atPeak:", e); } }   // podmiana ekranu pod PEŁNYM przykryciem, z dużym zapasem (~1,1s do odsłony) -> nowy ekran (nawet po zapytaniu do bazy) zdąży się namalować, koniec z mignięciem poprzedniego
-        await sleep(620);                    // tytuł trzyma dalej; nowy ekran maluje pierwsze klatki pod przykryciem
+        await sleep(850);                    // tytuł wszedł (opacity do ~0,67s) i trzyma pierwszy beat na czytanie
+        if (typeof atPeak === "function"){ try { atPeak(); } catch(e){ console.error("bumper atPeak:", e); } }   // podmiana ekranu pod PEŁNYM przykryciem, z dużym zapasem (~1,55s do odsłony) -> nowy ekran (nawet po zapytaniu do bazy) zdąży się namalować, koniec z mignięciem poprzedniego
+        await sleep(1550);                   // DŁUGIE trzymanie tytułu, żeby dało się spokojnie przeczytać 3-4 słowa (było za krótkie); nowy ekran maluje się pod przykryciem
         ov.classList.add("out");             // murawa zjeżdża, odsłania nowy rozdział
         await sleep(520);
         if (ov.parentNode) ov.parentNode.removeChild(ov);
