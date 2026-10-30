@@ -415,6 +415,16 @@
   #xad-intro.tag-in .xi-tagwrap { opacity:1; transform:none; transition:opacity .5s ease, transform .5s ease; }
   #xad-intro .xi-big { font-family:var(--px); color:var(--gold); font-size:clamp(14px,3vw,30px); letter-spacing:.12em; text-shadow:0 0 18px rgba(233,196,106,.5); }
   #xad-intro .xi-sub { font-family:var(--px); color:var(--dim,#8a8576); font-size:clamp(8px,1.4vw,13px); letter-spacing:.2em; margin-top:2.2vh; }
+
+  /* ODLICZANIE 3·2·1 na lobby (drużyny widać pod spodem), przed wejściem KICK OFF — dodane 2026-10-30 */
+  #xad-countdown { position:fixed; inset:0; z-index:948; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2vh;
+    background:rgba(4,8,5,.5); opacity:0; pointer-events:none; }
+  #xad-countdown.show { opacity:1; transition:opacity .35s ease; }
+  #xad-countdown.out  { opacity:0; transition:opacity .35s ease; }
+  #xad-countdown .cd-label { font-family:var(--px); color:var(--gold); font-size:clamp(10px,1.8vw,18px); letter-spacing:.22em; text-shadow:0 0 14px rgba(233,196,106,.5); }
+  #xad-countdown .cd-num { font-family:var(--px); color:#fff; font-size:clamp(60px,16vw,180px); line-height:1; text-shadow:0 0 30px rgba(233,196,106,.7),0 0 10px rgba(255,255,255,.6); }
+  #xad-countdown .cd-num.pop { animation:cdPop .9s cubic-bezier(.2,1.3,.3,1); }
+  @keyframes cdPop { 0%{transform:scale(.4);opacity:0} 25%{transform:scale(1.15);opacity:1} 60%{transform:scale(1)} 100%{transform:scale(.9);opacity:.3} }
   .story-ball { position:absolute; width:26px; height:26px; z-index:30; pointer-events:none;
                 display:flex; align-items:center; justify-content:center; transition:opacity .15s ease; }
   .story-ball i { font-size:24px; line-height:1; display:block; font-style:normal;
@@ -819,6 +829,7 @@
 
     // ── REVEAL FX (Akty 1–4), dodane 2026-10-27: DODATKI, czysta synteza, zero plikow; graja TYLKO po odblokowaniu audio (jak tone()) ──
     const XAD_FX = true;   // false => powrot do starego revealu (boisko wskakuje gotowe, bez nowych dzwiekow) — guard wszedzie
+    let xadStartSeq = false;   // true w trakcie sekwencji startu (odliczanie+wejscie+ROUND1) -> blokuje refreshDrafting, zeby nie podmienil ekranu lobby
     function fxOn(){ return audioCtx && audioCtx.state === "running"; }
     function fxWhoosh(){ if(!fxOn()||!xadNoise) return; try{ const s=audioCtx.createBufferSource(); s.buffer=xadNoise; const f=audioCtx.createBiquadFilter(), g=audioCtx.createGain(); s.connect(f);f.connect(g);g.connect(audioCtx.destination); f.type="lowpass"; const t0=audioCtx.currentTime;
       f.frequency.setValueAtTime(300,t0); f.frequency.exponentialRampToValueAtTime(3600,t0+0.4); f.frequency.exponentialRampToValueAtTime(500,t0+0.85);
@@ -1551,10 +1562,16 @@
           // (gwizdek startu usuniety — synteza za slaba; wroci gdy bedzie prawdziwy gwizdek CC0)
           const firstStart = (XAD_FX && room.current_round === 1 && (mode === "lobby" || mode === "connect"));   // WEJSCIE W GRE: tylko start rundy 1 z lobby
           mode = want;
-          if (firstStart){ gameStartIntro().then(function(){ chapterBumper("ROUND " + room.current_round, function(){ runDrafting(room); }); }); }   // wejscie -> ROUND 1 -> draft
+          if (firstStart){
+            xadStartSeq = true;   // trzymaj lobby pod spodem (blokuj refreshDrafting) na czas calej sekwencji
+            // ODLICZANIE 3·2·1 na lobby -> WEJSCIE KICK OFF -> ROUND 1 -> draft
+            gameStartCountdown().then(gameStartIntro).then(function(){
+              chapterBumper("ROUND " + room.current_round, function(){ xadStartSeq = false; runDrafting(room); });
+            });
+          }
           else { chapterBumper("ROUND " + room.current_round, function(){ runDrafting(room); }); }   // PRZERYWNIK -> budowanie skladu (opener rundy)
         }
-        else { refreshDrafting(room); }   // to samo mode -> tylko odswiez ptaszki
+        else { if (!xadStartSeq) refreshDrafting(room); }   // to samo mode -> tylko odswiez ptaszki (NIE w trakcie sekwencji startu — inaczej podmienilby lobby)
       }
     }
 
@@ -2296,13 +2313,37 @@
         if (typeof fxSting === "function") setTimeout(fxSting, 260); // miekki swell na logo (reuse)
         await sleep(700);
         ov.classList.add("tag-in");                                  // napis
-        await sleep(1800);
+        await sleep(2600);                                           // dluzej trzymaj KICK OFF, zeby dalo sie spokojnie przeczytac
         ov.classList.add("out");
         await sleep(560);
         if (ov.parentNode) ov.parentNode.removeChild(ov);
       } catch(e){
         console.error("gameStartIntro:", e);
         var old = document.getElementById("xad-intro"); if (old && old.parentNode) old.parentNode.removeChild(old);
+      }
+    }
+
+    // ODLICZANIE 3·2·1 (dodane 2026-10-30): na lobby, DRUŻYNY WIDAĆ POD SPODEM, zanim wejdzie KICK OFF.
+    // Daje salowy moment "wszyscy są, zaczynamy". try/catch -> nigdy nie blokuje startu.
+    async function gameStartCountdown(){
+      try {
+        var ov = document.createElement("div"); ov.id = "xad-countdown";
+        ov.innerHTML = '<div class="cd-label">KICKING OFF IN</div><div class="cd-num" id="cd-num"></div>';
+        document.body.appendChild(ov);
+        var numEl = ov.querySelector("#cd-num");
+        void ov.offsetWidth; ov.classList.add("show");
+        for (var n = 3; n >= 1; n--){
+          numEl.textContent = n;
+          numEl.classList.remove("pop"); void numEl.offsetWidth; numEl.classList.add("pop");
+          if (typeof fxEtick === "function") fxEtick(3 - n);   // tyk na kazda cyfre (jesli audio odblokowane), lekko rosnie
+          await sleep(900);
+        }
+        ov.classList.add("out");
+        await sleep(350);
+        if (ov.parentNode) ov.parentNode.removeChild(ov);
+      } catch(e){
+        console.error("gameStartCountdown:", e);
+        var old = document.getElementById("xad-countdown"); if (old && old.parentNode) old.parentNode.removeChild(old);
       }
     }
 
