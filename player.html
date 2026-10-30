@@ -108,11 +108,19 @@
     <div style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:14px">Eyes on the big screen…</div>
   </div>
 
-  <!-- ekran konca wieczoru (host kliknal END TONIGHT) -->
-  <div id="fld-ended" style="display:none;text-align:center;padding:60px 20px">
-    <div style="color:var(--gold);font-family:var(--px);font-size:14px;letter-spacing:1px;line-height:2">🏁 THAT'S THE NIGHT</div>
-    <div style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:14px">Final table is on<br>the big screen.</div>
-    <div style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:22px">Thanks for playing.<br>Same again next time?</div>
+  <!-- ekran konca wieczoru (host kliknal END TONIGHT) — osobista karta: radar DNA + typ + najlepsza historia -->
+  <div id="fld-ended" style="display:none;text-align:center;padding:34px 18px 48px">
+    <div style="color:var(--gold);font-family:var(--px);font-size:13px;letter-spacing:1px;line-height:1.8">🏁 THAT'S THE NIGHT</div>
+    <div id="fe-team" style="color:#cfe9d4;font-family:var(--px);font-size:11px;letter-spacing:1px;margin-top:10px"></div>
+    <div id="fe-loading" style="color:#8a8576;font-size:13px;letter-spacing:1px;margin-top:24px">building your night…</div>
+    <div id="fe-card" style="display:none;max-width:360px;margin:22px auto 0;padding:18px 16px;border:1px solid rgba(233,196,106,.25);border-radius:12px;background:rgba(15,23,16,.55)">
+      <div style="color:#8a8576;font-family:var(--px);font-size:8px;letter-spacing:3px">TONIGHT'S DNA</div>
+      <div id="fe-radar" style="max-width:320px;margin:10px auto 0"></div>
+      <div id="fe-type" style="margin-top:8px"></div>
+      <div id="fe-beststory" style="margin-top:20px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08)"></div>
+    </div>
+    <div id="fe-shot" style="display:none;color:#8a8576;font-family:var(--px);font-size:8px;letter-spacing:2px;margin-top:18px">📸 SCREENSHOT THIS</div>
+    <div style="color:#8a8576;font-family:var(--px);font-size:9px;letter-spacing:1px;line-height:2.2;margin-top:22px">Final table is on the big screen.<br>Thanks for playing.</div>
   </div>
 
  </div>
@@ -141,6 +149,329 @@
 
 <!-- ===== Sterowanie pub (Krok 2: lobby = draft z nieaktywnym ROLL; START zapala) ===== -->
 <script src="supabase.js"></script>   <!-- Supabase LOKALNIE (MIT) — bez obcego CDN -->
+
+<!-- ===== AKT B: radar DNA przeniesiony 1:1 z display.html (TV), w izolowanej kapsule — zero kolizji z xad.js ===== -->
+<script>
+(function(){
+  const STARS = new Set(["Bobby Moore","Bobby Charlton","Gary Lineker","Gordon Banks","Kevin Keegan",
+      "Alan Shearer","Wayne Rooney","Steven Gerrard","Frank Lampard","David Beckham","Harry Kane",
+      "Jude Bellingham","Bukayo Saka","Phil Foden","Declan Rice"]);
+  const NARR_NAMES = new Set([
+      "Adam Wharton",
+      "Alan Ball",
+      "Alan Cork",
+      "Alan Mullery",
+      "Alan Shearer",
+      "Allan Clarke",
+      "Andy Thorn",
+      "Ashley Cole",
+      "Ashley Young",
+      "Ben Chilwell",
+      "Billy Wright",
+      "Bobby Charlton",
+      "Bobby Mimms",
+      "Bobby Moore",
+      "Brian Gayle",
+      "Brian Labone",
+      "Bryan Robson",
+      "Bukayo Saka",
+      "Carlton Fairweather",
+      "Chris Holland",
+      "Chris Sutton",
+      "Chris Waddle",
+      "Chris Woods",
+      "Colin Bell",
+      "Conor Gallagher",
+      "Danny Drinkwater",
+      "Danny Simpson",
+      "Darius Vassell",
+      "Darren Anderton",
+      "Darren Bent",
+      "Darren Huckerby",
+      "Darren Peacock",
+      "Dave Beasant",
+      "David Batty",
+      "David Beckham",
+      "David James",
+      "David Johnson",
+      "David Needham",
+      "David Platt",
+      "David Seaman",
+      "Dean Henderson",
+      "Declan Rice",
+      "Dennis Wise",
+      "Des Walker",
+      "Eberechi Eze",
+      "Eddie Nketiah",
+      "Emile Heskey",
+      "Emlyn Hughes",
+      "Eric Young",
+      "Fabian Delph",
+      "Francis Lee",
+      "Frank Clark",
+      "Frank Lampard",
+      "Gareth Barry",
+      "Gareth Southgate",
+      "Garry Birtles",
+      "Gary Lineker",
+      "Gary Mills",
+      "Gary Neville",
+      "Gary Stevens",
+      "Geoff Hurst",
+      "George Cohen",
+      "Gerry Byrne",
+      "Glen Johnson",
+      "Glenn Hoddle",
+      "Gordon Banks",
+      "Graeme Le Saux",
+      "Graham Fenton",
+      "Graham Rix",
+      "Harry Kane",
+      "Harry Maguire",
+      "Ian Bowyer",
+      "Ian Callaghan",
+      "Jack Charlton",
+      "Jack Grealish",
+      "Jadon Sancho",
+      "James Milner",
+      "James Trafford",
+      "Jamie Carragher",
+      "Jamie Redknapp",
+      "Jamie Vardy",
+      "Jason Wilcox",
+      "Jermain Defoe",
+      "Jermaine Jenas",
+      "Jimmy Greaves",
+      "Joe Cole",
+      "Joe Hart",
+      "Joel Ward",
+      "John Barnes",
+      "John Beresford",
+      "John Fashanu",
+      "John Scales",
+      "John Stones",
+      "John Terry",
+      "Jordan Henderson",
+      "Jordan Pickford",
+      "Jude Bellingham",
+      "Kalvin Phillips",
+      "Keith Newton",
+      "Kenny Sansom",
+      "Kevin Keegan",
+      "Kieran Trippier",
+      "Kieron Dyer",
+      "Kyle Walker",
+      "Larry Lloyd",
+      "Ledley King",
+      "Lee Clark",
+      "Lee Makel",
+      "Les Ferdinand",
+      "Luke Shaw",
+      "Marc Albrighton",
+      "Marc Guehi",
+      "Marcus Rashford",
+      "Mark Atkins",
+      "Mark Hateley",
+      "Mark Wright",
+      "Martin Peters",
+      "Mason Mount",
+      "Matthew Le Tissier",
+      "Michael Carrick",
+      "Michael Owen",
+      "Mick Jones",
+      "Mick Mills",
+      "Mike Newell",
+      "Nathan Dyer",
+      "Nathaniel Clyne",
+      "Neil Ruddock",
+      "Nick Barmby",
+      "Nicky Butt",
+      "Nico O'Reilly",
+      "Nigel Clough",
+      "Nigel Martyn",
+      "Nobby Stiles",
+      "Norman Hunter",
+      "Owen Hargreaves",
+      "Paul Brayson",
+      "Paul Gascoigne",
+      "Paul Harford",
+      "Paul Ince",
+      "Paul Kitson",
+      "Paul Madeley",
+      "Paul Mariner",
+      "Paul Parker",
+      "Paul Reaney",
+      "Paul Scholes",
+      "Paul Warhurst",
+      "Peter Beardsley",
+      "Peter Bonetti",
+      "Peter Crouch",
+      "Peter Reid",
+      "Peter Shilton",
+      "Phil Foden",
+      "Phil Jagielka",
+      "Phil Neal",
+      "Phil Neville",
+      "Phil Thompson",
+      "Raheem Sterling",
+      "Raich Carter",
+      "Ray Clemence",
+      "Ray Kennedy",
+      "Ray Wilkins",
+      "Ray Wilson",
+      "Rico Lewis",
+      "Rio Ferdinand",
+      "Rob Lee",
+      "Robbie Elliott",
+      "Robbie Fowler",
+      "Robert Green",
+      "Roger Hunt",
+      "Ruel Fox",
+      "Scott Carson",
+      "Scott Sellars",
+      "Sol Campbell",
+      "Stan Bowles",
+      "Stan Collymore",
+      "Stephen Warnock",
+      "Steve Bruce",
+      "Steve Coppell",
+      "Steve Harper",
+      "Steve Hodge",
+      "Steve Howey",
+      "Steve McMahon",
+      "Steve McManaman",
+      "Steve Stone",
+      "Steve Watson",
+      "Steven Gerrard",
+      "Stuart Pearce",
+      "Stuart Ripley",
+      "Teddy Sheringham",
+      "Terry Butcher",
+      "Terry Cooper",
+      "Terry McDermott",
+      "Theo Walcott",
+      "Tim Flowers",
+      "Tim Sherwood",
+      "Tommy Smith",
+      "Tony Adams",
+      "Tony Gale",
+      "Tony Woodcock",
+      "Trent Alexander-Arnold",
+      "Trevor Brooking",
+      "Trevor Cherry",
+      "Trevor Francis",
+      "Trevor Steven",
+      "Tyrick Mitchell",
+      "Viv Anderson",
+      "Wally Downes",
+      "Warren Barton",
+      "Wayne Bridge",
+      "Wayne Rooney",
+      "Wes Brown",
+      "Will Hughes"
+    ]);
+function isDeepCutTV(n){ return !STARS.has(n) && !NARR_NAMES.has(n); }
+
+    // liczenie osi ze skladu — jak flCounts w solo (attack/defense pomijamy, radar ich nie uzywa)
+    function flCountsTV(arr){
+      var c={C:0,G:0,M:0,stars:0,deep:0};
+      for(var i=0;i<arr.length;i++){ var p=arr[i]; if(!p) continue;
+        if(p.e==="C")c.C++; else if(p.e==="G")c.G++; else if(p.e==="M")c.M++;
+        if(STARS.has(p.n))c.stars++;
+        if(isDeepCutTV(p.n))c.deep++;
+      }
+      return c;
+    }
+    function flConc(arr){
+  var clubs={}, era={C:0,G:0,M:0};
+  for(var i=0;i<arr.length;i++){ var p=arr[i]; if(!p) continue;
+    if(p.c&&p.c.length){ clubs[p.c[0]]=(clubs[p.c[0]]||0)+1; }
+    if(era[p.e]!=null) era[p.e]++;
+  }
+  var top=0,d=0; for(var k in clubs){ d++; if(clubs[k]>top) top=clubs[k]; }
+  return {topClub:top, distinct:d, topEra:Math.max(era.C,era.G,era.M)};
+}
+
+    // stale i wzor osi — 1:1 z solo
+    var FL_FRAC = {vintage:7.7/11, modern:3.3/11, stars:0.8/11, deep:4.2/11, loyalty:2.7/11};
+    function flBaseVal(pkSum, frac, gg){ if(!gg) return 0; return 100*((pkSum/(gg*11)) - frac); }
+    var FL_BASE = {history:7.7, modern:3.3, stars:0.8, scout:4.2, loyalty:2.7};
+    var FL_TYPE = {
+      history:  {name:"THROWBACK",    subs:["the game was better in black and white","proper footballers, proper haircuts","never trust a player born after 1990","they don't make them like they used to"]},
+      modern:   {name:"NEW SCHOOL",   subs:["today's players, every time","history is for the history books","if they're not playing now, they're not in","the modern game, no apologies"]},
+      stars:    {name:"STAR HUNTER",  subs:["if they're famous, they're in","big names, no bench","gal\u00e1cticos or nothing","you buy the shirt with the name on it"]},
+      scout:    {name:"SCOUT",        subs:["you remember who everyone forgot","deep cuts only","the names nobody else dared pick","gems the crowd had to google"]},
+      attack:   {name:"ATTACK FIRST", subs:["defence is the opponent's problem","outscore them, worry later","goals fix everything","who needs a back four"]},
+      backbone: {name:"BACKBONE",     subs:["clean sheets win titles","build from the back","nil-nil is a good start","defence first, always"]},
+      loyalty:  {name:"LOYALIST",     subs:["one club, eleven shirts","loyalty over talent","bleeds one colour","never crosses the divide"]},
+      balanced: {name:"ALL-ROUNDER",  subs:["the complete fan","a bit of everything","no bias, just balance","reads the whole game"]}
+    };
+    function flPoly(vals, cx, cy, R){
+  var ang=[-90,-18,54,126,198], p=[];
+  for(var i=0;i<5;i++){ var r=(Math.max(2,Math.min(100,vals[i]))/100)*R, a=ang[i]*Math.PI/180;
+    p.push((cx+r*Math.cos(a)).toFixed(1)+","+(cy+r*Math.sin(a)).toFixed(1)); }
+  return p.join(" ");
+}
+    function buildRadarSVG(life, form, games){
+  var cx=190, cy=148, R=104, ang=[-90,-18,54,126,198];
+  var keys=["vintage","modern","stars","deep","loyalty"];
+  var labels=["VINTAGE","MODERN","STARS","DEEP CUTS","LOYALTY"];
+  var scale={vintage:1.0,modern:1.0,stars:2.6,deep:1.0,loyalty:1.3};
+  function disp(o){ return keys.map(function(k){ return 50 + (o[k]||0)*scale[k]; }); }
+  function vtx(d,i){ var v=Math.max(2,Math.min(100,d[i])), r=(v/100)*R, a=ang[i]*Math.PI/180; return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; }
+  var svg='<svg viewBox="0 0 380 300" width="100%" xmlns="http://www.w3.org/2000/svg">';
+  [0.25,0.5,0.75,1].forEach(function(f){
+    var p=[]; for(var i=0;i<5;i++){ var a=ang[i]*Math.PI/180; p.push((cx+f*R*Math.cos(a)).toFixed(1)+","+(cy+f*R*Math.sin(a)).toFixed(1)); }
+    svg+='<polygon points="'+p.join(" ")+'" fill="none" stroke="#565349" stroke-width="1.3"/>';
+  });
+  for(var i=0;i<5;i++){ var a=ang[i]*Math.PI/180; svg+='<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R*Math.cos(a)).toFixed(1)+'" y2="'+(cy+R*Math.sin(a)).toFixed(1)+'" stroke="#4a4840" stroke-width="1.3"/>'; }
+  var g=(games==null)?999:games, dl=disp(life);
+  if(g>=10){
+    svg+='<polygon points="'+flPoly(dl,cx,cy,R)+'" fill="rgba(233,196,106,0.26)" stroke="#e9c46a" stroke-width="2.5"/>';
+    svg+='<polygon points="'+flPoly(disp(form),cx,cy,R)+'" fill="none" stroke="#e2554a" stroke-width="2" stroke-dasharray="5,4"/>';
+  } else {
+    // KONSTELACJA (szkic): ghost pelnego ksztaltu od gry 1 + kropki (STALA kolejnosc katowa) + domykanie bokow
+    // ghost = blady przerywany zarys docelowego DNA -> "tu powstaje ksztalt", nie pustka/bug. Forma ukryta do 10.
+    svg+='<polygon points="'+flPoly(dl,cx,cy,R)+'" fill="rgba(233,196,106,0.05)" stroke="#8a7d55" stroke-width="1.2" stroke-dasharray="3,4" opacity="0.55"/>';
+    var order=[0,1,2,3,4]; // STALA kolejnosc (mierzalny eksperyment) — katowa VINTAGE->MODERN->STARS->DEEP->LOYALTY
+    var nDots=Math.min(g,5), shown={};
+    for(var d0=0; d0<nDots; d0++){ shown[order[d0]]=true; }
+    var nEdges = g<=5 ? 0 : Math.min(g-5,5), edges=[[0,1],[1,2],[2,3],[3,4],[4,0]];
+    for(var e=0;e<nEdges;e++){ var A=vtx(dl,edges[e][0]), B=vtx(dl,edges[e][1]);
+      svg+='<line x1="'+A[0].toFixed(1)+'" y1="'+A[1].toFixed(1)+'" x2="'+B[0].toFixed(1)+'" y2="'+B[1].toFixed(1)+'" stroke="#e9c46a" stroke-width="2.4"/>'; }
+    for(var k2 in shown){ var P=vtx(dl,+k2); svg+='<circle cx="'+P[0].toFixed(1)+'" cy="'+P[1].toFixed(1)+'" r="3.6" fill="#e9c46a"/>'; }
+  }
+  for(var j=0;j<5;j++){ var a2=ang[j]*Math.PI/180, lx=cx+(R+18)*Math.cos(a2), ly=cy+(R+18)*Math.sin(a2);
+    var anc=Math.abs(Math.cos(a2))<0.35?"middle":(Math.cos(a2)>0?"start":"end");
+    svg+='<text x="'+lx.toFixed(1)+'" y="'+(ly+4).toFixed(1)+'" fill="#c9c4b2" font-size="9" text-anchor="'+anc+'">'+labels[j]+'</text>'; }
+  return svg+'</svg>';
+}
+
+    // ── PUB: profil druzyny z TEGO wieczoru (sumy po rundach) ──
+    function radarDruzyny(xiRund){
+      var g = xiRund.length;
+      var sum={C:0,G:0,M:0,stars:0,deep:0}, topClub=0;
+      xiRund.forEach(function(xi){
+        var c=flCountsTV(xi);
+        for(var k in sum) sum[k]+=c[k];
+        topClub += flConc(xi).topClub;
+      });
+      var life={
+        vintage: flBaseVal(sum.C+sum.G, FL_FRAC.vintage, g),
+        modern:  flBaseVal(sum.M,       FL_FRAC.modern,  g),
+        stars:   flBaseVal(sum.stars,   FL_FRAC.stars,   g),
+        deep:    flBaseVal(sum.deep,    FL_FRAC.deep,    g),
+        loyalty: flBaseVal(topClub,     FL_FRAC.loyalty, g)
+      };
+      // typ kibica — wzor jak flFanType w solo, BEZ progu 10 gier (decyzja Pawla)
+      var sr = { history:(sum.C+sum.G)/g, modern:sum.M/g, stars:sum.stars/g, scout:sum.deep/g, loyalty:topClub/g };
+      var best="balanced", bv=1.0;
+      for(var k2 in FL_BASE){ var ex=sr[k2]-FL_BASE[k2]; if(ex>bv){ bv=ex; best=k2; } }
+      return { svg: buildRadarSVG(life, life, null), typ: FL_TYPE[best] || FL_TYPE.balanced };
+    }
+  window.xadBuildMyRadar = radarDruzyny;   // telefon: radar z XI-ow rund gracza
+})();
+</script>
 <script>
   // --- config (te same co host/join) ---
   const SUPABASE_URL = "https://wrvbpxeuadalnflfygtk.supabase.co";
@@ -212,7 +543,9 @@
         document.getElementById("fld-waiting").style.display = "none";
         document.getElementById("fld-locked").style.display = "none";
         document.getElementById("fld-reveal").style.display = "none";
+        var _fb = document.getElementById("fld-break"); if (_fb){ _fb.style.display = "none"; _fb.style.opacity = "0"; }
         document.getElementById("fld-ended").style.display = "";
+        renderEndCard();   // AKT B: osobista karta (radar + typ + najlepsza historia)
         try { localStorage.removeItem("fl_xad_draft"); } catch(e){}
         try { window.scrollTo(0,0); } catch(e){}
       }
@@ -349,6 +682,77 @@
       + '<div style="color:' + nameColor + ';font-family:\'Press Start 2P\',monospace;font-size:13px;letter-spacing:1px;line-height:1.5;margin-top:12px;text-shadow:0 0 12px rgba(233,196,106,.35)">' + emoji + _esc(nameText) + '</div>'
       + '<div style="color:#cfe9d4;font-size:14px;line-height:1.5;margin-top:12px">' + _esc(descText) + '</div>'
       + rest;
+  }
+
+  // ── AKT B: osobista karta po grze — radar + typ + najlepsza historia nocy. Zero punktow. ──
+  async function renderEndCard(){
+    try {
+      var team = document.getElementById("fe-team"); if (team) team.textContent = (TEAM_NAME || "").toUpperCase();
+      var loadEl = document.getElementById("fe-loading");
+      var cardEl = document.getElementById("fe-card");
+      if (!TEAM_ID){ if (loadEl) loadEl.textContent = ""; return; }
+      // wszystkie wpisy tej druzyny (XI + historia) — po round_id + team_id, jak w Akcie A (bezpieczne pod RLS)
+      var rows = [];
+      try {
+        var roomId2 = room && room.id;
+        if (roomId2){
+          const { data: rds } = await sb.from("rounds").select("id").eq("room_id", roomId2);
+          const roundIds = (rds || []).map(function(x){ return x.id; });
+          if (roundIds.length){
+            const { data } = await sb.from("entries").select("xi,title").in("round_id", roundIds).eq("team_id", TEAM_ID);
+            rows = data || [];
+          }
+        }
+      } catch(e){ console.error("end entries:", e); }
+      // skladniki do radaru (slots per runda)
+      var xiRounds = [];
+      rows.forEach(function(e){
+        var xi = e && e.xi;
+        var slots = (xi && xi.slots) ? xi.slots : (Array.isArray(xi) ? xi : []);
+        var clean = (slots || []).filter(function(p){ return p; });
+        if (clean.length) xiRounds.push(clean);
+      });
+      var rEl = document.getElementById("fe-radar"), tEl = document.getElementById("fe-type"),
+          bsEl = document.getElementById("fe-beststory"), shot = document.getElementById("fe-shot");
+      if (!xiRounds.length){   // nie zagral zadnej rundy
+        if (loadEl) loadEl.textContent = "";
+        if (rEl) rEl.innerHTML = "";
+        if (tEl) tEl.innerHTML = '<div style="color:#8a8576;font-size:14px;line-height:1.5">You didn\'t lock an XI tonight.<br>Jump in next time!</div>';
+        if (bsEl) bsEl.style.display = "none";
+        if (cardEl) cardEl.style.display = "";
+        return;
+      }
+      // RADAR + TYP
+      var radar = null; try { radar = xadBuildMyRadar(xiRounds); } catch(e){ console.error("radar:", e); }
+      if (rEl && radar && radar.svg) rEl.innerHTML = radar.svg;
+      if (tEl && radar && radar.typ){
+        var sub = (radar.typ.subs && radar.typ.subs.length) ? radar.typ.subs[0] : (radar.typ.sub || "");
+        tEl.innerHTML = '<div style="color:#e9c46a;font-family:\'Press Start 2P\',monospace;font-size:13px;letter-spacing:1px;text-shadow:0 0 12px rgba(233,196,106,.35)">' + _esc(radar.typ.name || "") + '</div>'
+          + (sub ? '<div style="color:#8a8576;font-size:13px;line-height:1.4;margin-top:8px">' + _esc(sub) + '</div>' : '');
+      }
+      // NAJLEPSZA HISTORIA NOCY (prawdziwa narracja, najwyzszy bonus w2)
+      var best = null, bestW = -1;
+      rows.forEach(function(e){
+        var st = parseStory(e && e.title);
+        if (st && (st.coreKind === "narr" || st.coreKind === "arch") && st.name){
+          var w = (typeof st.w2 === "number") ? st.w2 : 0;
+          if (w > bestW){ bestW = w; best = st; }
+        }
+      });
+      if (bsEl){
+        if (best){
+          var col = (best.coreKind === "arch") ? "#ff7ae0" : "#e9c46a";
+          bsEl.innerHTML = '<div style="color:#8a8576;font-family:\'Press Start 2P\',monospace;font-size:8px;letter-spacing:2px">BEST STORY OF THE NIGHT</div>'
+            + '<div style="color:' + col + ';font-family:\'Press Start 2P\',monospace;font-size:11px;letter-spacing:1px;line-height:1.5;margin-top:10px">' + (best.emoji ? (_esc(best.emoji) + " ") : "") + _esc(best.name || "") + '</div>'
+            + (best.desc ? '<div style="color:#cfe9d4;font-size:13px;line-height:1.5;margin-top:8px">' + _esc(best.desc) + '</div>' : "");
+        } else {
+          bsEl.innerHTML = '<div style="color:#8a8576;font-size:13px;line-height:1.5">No standout story this time — but a proper XI.</div>';
+        }
+      }
+      if (cardEl) cardEl.style.display = "";
+      if (loadEl) loadEl.textContent = "";
+      if (shot) shot.style.display = "";
+    } catch(e){ console.error("renderEndCard:", e); var l = document.getElementById("fe-loading"); if (l) l.textContent = ""; }
   }
 
   // ── KROK 1 READY: sygnal gotowosci (BEZ auto-startu rundy — host nadal pcha SKIP/NEXT ROUND) ──
