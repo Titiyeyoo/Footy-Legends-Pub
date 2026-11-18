@@ -117,6 +117,18 @@
   .shot-placeholder b{color:var(--gold);font-weight:400;letter-spacing:.2em}
   .caption{font-family:var(--px);font-size:11px;letter-spacing:.16em;color:var(--mute);text-align:center;margin-top:14px;text-transform:uppercase}
 
+  /* ── live demo inside the telly frame ── */
+  .telly.live{position:relative}
+  .telly video{display:block;width:100%;height:auto;border-radius:inherit;background:#000}
+  .demo-sound{
+    position:absolute;right:12px;bottom:12px;
+    font-family:var(--px);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    background:rgba(8,11,9,.78);color:var(--gold);border:1px solid var(--line);
+    border-radius:4px;padding:8px 12px;cursor:pointer;
+  }
+  .demo-sound:hover{background:rgba(233,196,106,.16)}
+  .demo-sound:focus-visible{outline:2px solid var(--lock);outline-offset:2px}
+
   /* ── beats of the night (a real sequence, so it's ordered) ── */
   section{padding:66px 0;border-top:1px solid rgba(233,196,106,.12)}
   h2{
@@ -199,12 +211,15 @@
     </div>
     <div class="under">Footy Legends — where it started · free to play</div>
 
-    <!-- ZDJĘCIE 1 (hero): podmień poniższy blok na:
-         <img src="images/tv-hero.jpg" alt="11 After Dark on a pub screen">   -->
-    <div class="telly">
-      <img src="tv-hero.png?v=1" alt="11 After Dark final standings on the big screen" width="1400" height="788" decoding="async">
+    <!-- DEMO (hero): film w ramce telewizora. autoplay bez dźwięku + przycisk dźwięku.
+         Pliki demo.mp4 i demo-poster.jpg leżą w root repo, obok index.html. -->
+    <div class="telly live">
+      <video id="demoVid" src="demo.mp4" poster="demo-poster.jpg"
+             autoplay muted loop playsinline preload="metadata"
+             width="1400" height="788"></video>
+      <button class="demo-sound" id="demoSound" type="button" aria-label="Toggle sound">🔊 Sound</button>
     </div>
-    <div class="caption">The screen does the talking. The bar keeps pouring.</div>
+    <div class="caption">A full night in under a minute. The screen does the talking.</div>
   </div>
 
   <section>
@@ -321,6 +336,19 @@
     var a = e.target.closest ? e.target.closest('a[href="#book"]') : null;
     if (a){ e.preventDefault(); var s = document.getElementById("book"); if (s) s.scrollIntoView({ behavior:"smooth" }); }
   });
+</script>
+
+<script>
+  // Demo: klik w przycisk lub w film wlacza/wylacza dzwiek (autoplay startuje wyciszony).
+  (function(){
+    var v = document.getElementById("demoVid"), b = document.getElementById("demoSound");
+    if (!v || !b) return;
+    function sync(){ b.textContent = v.muted ? "🔊 Sound" : "🔇 Mute"; }
+    function toggle(){ v.muted = !v.muted; if (!v.muted){ v.play().catch(function(){}); } sync(); }
+    b.addEventListener("click", toggle);
+    v.addEventListener("click", toggle);
+    sync();
+  })();
 </script>
 </body>
 </html>
