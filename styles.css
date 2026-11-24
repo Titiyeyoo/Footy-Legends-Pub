@@ -1325,3 +1325,17 @@ canvas#pitch{display:block;width:100%;height:100%}
   -webkit-tap-highlight-color:transparent;
 }
 #s-xad .xad-story-replay:hover,#s-xad .xad-story-replay:active{opacity:.85}
+
+/* ── LOSOWANIE PULI (bęben) + GWIAZDY NA ZIELONO — 2026-11-24 ──
+   Tylko prezentacja listy 30 w drafcie. Zielony = wyłącznie 15 gwiazd (STARS w xad.js). */
+#s-xad .xad-card.star .nm{color:#3dff6a;font-weight:bold;text-shadow:0 0 6px rgba(61,255,106,.45)}
+#s-xad .xad-card.spinning{pointer-events:none}
+#s-xad .xad-card.spinning .nm,#s-xad .xad-card.spinning .meta{color:#aaa;filter:blur(.4px);text-shadow:none}
+#s-xad .xad-card.spinning .dot{background:#333}
+#s-xad .xad-card .spin-tick{animation:xadSpinTick .07s linear}
+@keyframes xadSpinTick{from{transform:translateY(-70%);opacity:.3}to{transform:translateY(0);opacity:1}}
+#s-xad .xad-card.spin-landed .nm,#s-xad .xad-card.spin-landed .meta{animation:xadSpinLand .28s cubic-bezier(.3,1.6,.5,1)}
+@keyframes xadSpinLand{0%{transform:translateY(-40%)}100%{transform:translateY(0)}}
+#s-xad .xad-card.spin-jackpot{animation:xadSpinJackpot .9s ease-out}
+@keyframes xadSpinJackpot{0%{background:#1e5e2a;box-shadow:inset 0 0 0 2px #3dff6a,0 0 18px rgba(61,255,106,.7)}100%{background:#141414;box-shadow:none}}
+@media(prefers-reduced-motion:reduce){#s-xad .xad-card .spin-tick,#s-xad .xad-card.spin-landed .nm,#s-xad .xad-card.spin-landed .meta,#s-xad .xad-card.spin-jackpot{animation:none}}
