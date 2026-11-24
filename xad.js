@@ -604,6 +604,8 @@ function render(animate, justJumped){
 // na boisku pokazujemy nazwisko (krótko); pełne imię i tak jest w puli
 function lastName(full){
   const parts = String(full).trim().split(/\s+/);
+  // przyrostki (Sr/Snr/Jr/Jnr/II-V, z kropka tez) pomijamy: "Frank Lampard Sr" -> "Lampard"
+  while(parts.length>1 && /^(sr|snr|jr|jnr|ii|iii|iv|v)\.?$/i.test(parts[parts.length-1])) parts.pop();
   return parts.length>1 ? parts[parts.length-1] : full;
 }
 function escXad(s){
