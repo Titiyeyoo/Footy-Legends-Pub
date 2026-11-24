@@ -254,6 +254,7 @@ function flSaveDraft(){
 function flClearDraft(){ try{ localStorage.removeItem("fl_xad_draft"); }catch(e){} }
 
 function openDraftFresh(){
+  SPIN = null;   // nowy draft → przerwij ewentualne losowanie
   POOL = [];
   REROLL_USED = false;
   DEALT = false; POS_FILTER = null; TARGET_SLOT = null;
@@ -285,6 +286,7 @@ function flGetSavedDraft(){
 }
 function flRestoreDraft(b){
   try{
+    SPIN = null;   // powrot draftu = lista od razu stoi, bez losowania
     // WALIDACJA (bezpieczenstwo + integralnosc): odtwarzaj tylko zawodnikow istniejacych w aktualnej bazie,
     // i uzywaj obiektu z DB (nie z localStorage) -> renderowane nazwisko zawsze czyste, usunieci/spreparowani wypadaja.
     var valid={};
@@ -379,9 +381,67 @@ function drawSquad(){
     };
     pinTop(); requestAnimationFrame(pinTop);
     setTimeout(pinTop,120); setTimeout(pinTop,380); setTimeout(pinTop,700);
-    // kaskada: zawodnicy w puli pojawiają się jeden po drugim
-    cascadePool();
+    // losowanie jak w jednorekim bandycie (tylko prezentacja; pula juz jest gotowa w POOL)
+    startPoolSpin();
   }, 520);
+}
+/* ── LOSOWANIE PULI (bęben): CZYSTO PREZENTACJA ──────────────────────
+   POOL jest juz wylosowany przez buildPool() — tu NIE zmieniamy niczego w danych.
+   Animacja podmienia tylko TEKST nazwiska/klubu na kartach, a na zatrzymaniu
+   przywraca dokladnie to, co narysowal render(). Karta, ktora sie kreci, jest
+   nieklikalna; ta, ktora stanela, dziala normalnie. Odtworzenie draftu po
+   odswiezeniu (flRestoreDraft) tego nie wola → lista od razu stoi. */
+const SPIN_BASE = 900, SPIN_STEP = 90;   // tempo WOLNO (~3,5 s na pule 30) — wybor Pawla 2026-11-24
+let SPIN = null;                          // {t0, stops:{nazwisko:ms}, max, live:[...]}
+function startPoolSpin(){
+  try{
+    if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cards = el("xad-pool") ? el("xad-pool").querySelectorAll(".xad-card") : [];
+    if(!cards.length) return;
+    const stops = {}; let max = 0;
+    cards.forEach((c,i)=>{ const st = SPIN_BASE + i*SPIN_STEP; stops[c.dataset.n] = st; if(st>max) max=st; });
+    SPIN = { id: Date.now()+Math.random(), t0: performance.now(), stops: stops, max: max, live: [] };
+    cards.forEach(c => { const p = POOL.find(x => x.n===c.dataset.n); if(p) spinRegister(c, p); });
+    const id = SPIN.id;
+    requestAnimationFrame(function f(now){ if(SPIN && SPIN.id===id && spinFrame(now)) requestAnimationFrame(f); });
+  }catch(e){ SPIN = null; }
+}
+// wolane z render() dla kazdej karty, gdy losowanie trwa (render moze przebudowac liste w trakcie)
+function spinRegister(card, p){
+  if(!SPIN || card.classList.contains("used")) return;
+  const stop = SPIN.stops[p.n];
+  if(stop==null || performance.now()-SPIN.t0 >= stop) return;
+  const nm = card.querySelector(".nm"), meta = card.querySelector(".meta");
+  SPIN.live.push({ card:card, p:p, stop:stop, next:0, nmHTML: nm ? nm.innerHTML : "", metaTxt: meta ? meta.textContent : "" });
+  card.classList.add("spinning");
+}
+function spinFrame(now){   // zwraca true, gdy trzeba dalej krecic
+  if(!SPIN) return false;
+  const t = now - SPIN.t0;
+  for(const s of SPIN.live){
+    if(s.done) continue;
+    const nm = s.card.querySelector(".nm"), meta = s.card.querySelector(".meta");
+    if(t >= s.stop){
+      s.done = true;
+      if(nm){ nm.innerHTML = s.nmHTML; nm.classList.remove("spin-tick"); }   // DOKLADNIE to, co narysowal render()
+      if(meta){ meta.textContent = s.metaTxt; meta.classList.remove("spin-tick"); }
+      s.card.classList.remove("spinning");
+      s.card.classList.add("spin-landed");
+      if(STARS.has(s.p.n)) s.card.classList.add("spin-jackpot");
+      continue;
+    }
+    if(t >= s.next){
+      const pr = t / s.stop;
+      s.next = t + 45 + 170*pr*pr*pr;                // beben zwalnia przed zatrzymaniem
+      if(!SPIN.grp) SPIN.grp = {};
+      const grp = SPIN.grp[s.p.p] || (SPIN.grp[s.p.p] = DB.filter(x => x.p===s.p.p)), r = grp[rnd(grp.length)];
+      if(nm) nm.textContent = r.n;
+      if(meta) meta.textContent = clubLabel(r);
+      [nm, meta].forEach(e => { if(!e) return; e.classList.remove("spin-tick"); void e.offsetWidth; e.classList.add("spin-tick"); });
+    }
+  }
+  if(t < SPIN.max + 50) return true;
+  SPIN = null; return false;
 }
 // kaskada pojawiania kart w puli — dodaje klasę po kolei (CSS robi fade/slide), widocznie od 1. do ostatniego
 function cascadePool(){
@@ -527,6 +587,7 @@ function render(animate, justJumped){
                            : n+" stories discovered"; }
   // POOL (lista nazwisk)
   const poolEl = el("xad-pool"); poolEl.innerHTML = "";
+  if(SPIN) SPIN.live = [];                        // lista przebudowana → losowanie podpina nowe karty
   if(!DEALT){
     poolEl.innerHTML = '<div class="xad-poolempty">Roll the squad to deal your players.</div>';
   } else {
@@ -551,13 +612,16 @@ function render(animate, justJumped){
     }
     list.forEach(p => {
       const d = document.createElement("div");
-      d.className = "xad-card "+GRP[p.p] + (inXI(p.n) ? " used":"");
+      const isStar = STARS.has(p.n);              // ZIELONY = tylko 15 gwiazd (zero sygnalu o narracjach)
+      d.className = "xad-card "+GRP[p.p] + (inXI(p.n) ? " used":"") + (isStar ? " star":"");
+      d.dataset.n = p.n;
       d.innerHTML = '<span class="dot '+(ERA_DOT[p.e]||"")+'"></span>'+
-                    '<span class="nm">'+escXad(p.n)+'</span>'+
+                    '<span class="nm">'+(isStar ? '★ ' : '')+escXad(p.n)+'</span>'+
                     '<span class="meta">'+escXad(clubLabel(p))+'</span>'+
                     '<span class="pos">'+posLabel(p)+'</span>';
-      if(!inXI(p.n)) d.onclick = () => placePlayer(p);
+      if(!inXI(p.n)) d.onclick = () => { if(d.classList.contains("spinning")) return; placePlayer(p); };
       poolEl.appendChild(d);
+      if(SPIN) spinRegister(d, p);                // losowanie trwa → ta karta dalej sie kreci az do swojego czasu
     });
   }
   // PITCH — żywe koła pozycjonowane wg x/y formacji (puste boisko widać od startu)
