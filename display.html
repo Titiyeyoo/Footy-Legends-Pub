@@ -2008,9 +2008,10 @@
         // nie zrobia nic (pierwszy zapis wygrywa). SKIP dalej dziala jako natychmiastowy override.
         let switched = false;
         try {
-          const { data: upd, error: tErr } = await db.from("rooms").update({ status: "table" })
-            .eq("id", roomId).eq("status", "reveal").select("status");
-          switched = !tErr && Array.isArray(upd) && upd.length > 0;
+          // USZCZELNIENIE 2026-11-25: zamiast bezposredniego zapisu do rooms -> bezpieczna funkcja close_phase
+          // (umie TYLKO reveal -> table; zwraca 'table' gdy przestawila, NULL gdy pokoj nie byl w reveal)
+          const { data: st, error: tErr } = await db.rpc("close_phase", { p_room_id: roomId });
+          switched = !tErr && st === "table";
           if (tErr){
             console.error("AUTO-TABLE ZABLOKOWANE:", tErr.message);
             const rl = el("ready-line");
