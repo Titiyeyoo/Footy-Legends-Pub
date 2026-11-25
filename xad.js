@@ -392,15 +392,52 @@ function drawSquad(){
    nieklikalna; ta, ktora stanela, dziala normalnie. Odtworzenie draftu po
    odswiezeniu (flRestoreDraft) tego nie wola → lista od razu stoi. */
 const SPIN_BASE = 900, SPIN_STEP = 90;   // tempo WOLNO (~3,5 s na pule 30) — wybor Pawla 2026-11-24
-let SPIN = null;                          // {t0, stops:{nazwisko:ms}, max, live:[...]}
+const SPIN_BACK_PAUSE = 400;               // pauza po ostatniej karcie, zanim lista wroci na gore
+let SPIN = null;                          // {t0, stops:{nazwisko:ms}, max, live:[...], follow}
+let SPIN_IGNORE_CLICK_UNTIL = 0;          // dotkniecie, ktore konczy losowanie, NIE wybiera zawodnika
+let SPIN_SCROLL_RAF = 0;                  // plynne przewijanie (wlasne, zeby dalo sie je przerwac)
+// kontener, ktory realnie sie przewija: mobile = #s-xad (lista bez wlasnego scrolla), desktop = #xad-pool
+function spinScroller(){
+  const pl = el("xad-pool");
+  try{ if(pl && getComputedStyle(pl).overflowY==="auto" && pl.scrollHeight > pl.clientHeight+2) return pl; }catch(e){}
+  return el("s-xad");
+}
+function spinScrollTo(sc, y, dur, done){
+  cancelAnimationFrame(SPIN_SCROLL_RAF);
+  if(!sc){ if(done) done(); return; }
+  const y0 = sc.scrollTop, t0 = performance.now();
+  const f = now => {
+    const k = Math.min(1,(now-t0)/dur), e = k<.5 ? 2*k*k : 1-Math.pow(-2*k+2,2)/2;
+    sc.scrollTop = y0 + (y-y0)*e;
+    if(k<1) SPIN_SCROLL_RAF = requestAnimationFrame(f); else if(done) done();
+  };
+  SPIN_SCROLL_RAF = requestAnimationFrame(f);
+}
+// gracz dotknal/przewinal → konczymy losowanie (wynik bez zmian) i oddajemy mu ekran
+function spinUserTook(){
+  if(SPIN){
+    spinFinishAll();
+    SPIN_IGNORE_CLICK_UNTIL = Date.now() + 450;
+  }
+  clearTimeout(SPIN_BACK_TIMER);
+  cancelAnimationFrame(SPIN_SCROLL_RAF);
+}
+let SPIN_LISTENERS = false;
+function spinAttachListeners(){
+  if(SPIN_LISTENERS) return;
+  const sx = el("s-xad"); if(!sx) return;
+  ["pointerdown","touchstart","wheel"].forEach(ev => sx.addEventListener(ev, spinUserTook, {passive:true}));
+  SPIN_LISTENERS = true;
+}
 function startPoolSpin(){
   try{
     if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const cards = el("xad-pool") ? el("xad-pool").querySelectorAll(".xad-card") : [];
     if(!cards.length) return;
+    spinAttachListeners();
     const stops = {}; let max = 0;
     cards.forEach((c,i)=>{ const st = SPIN_BASE + i*SPIN_STEP; stops[c.dataset.n] = st; if(st>max) max=st; });
-    SPIN = { id: Date.now()+Math.random(), t0: performance.now(), stops: stops, max: max, live: [] };
+    SPIN = { id: Date.now()+Math.random(), t0: performance.now(), stops: stops, max: max, live: [], follow: true };
     cards.forEach(c => { const p = POOL.find(x => x.n===c.dataset.n); if(p) spinRegister(c, p); });
     const id = SPIN.id;
     requestAnimationFrame(function f(now){ if(SPIN && SPIN.id===id && spinFrame(now)) requestAnimationFrame(f); });
@@ -415,34 +452,67 @@ function spinRegister(card, p){
   SPIN.live.push({ card:card, p:p, stop:stop, next:0, nmHTML: nm ? nm.innerHTML : "", metaTxt: meta ? meta.textContent : "" });
   card.classList.add("spinning");
 }
+function spinLand(s){
+  s.done = true;
+  const nm = s.card.querySelector(".nm"), meta = s.card.querySelector(".meta");
+  if(nm){ nm.innerHTML = s.nmHTML; nm.classList.remove("spin-tick"); }   // DOKLADNIE to, co narysowal render()
+  if(meta){ meta.textContent = s.metaTxt; meta.classList.remove("spin-tick"); }
+  s.card.classList.remove("spinning","spin-flash");
+  s.card.classList.add("spin-landed");
+  if(STARS.has(s.p.n)) s.card.classList.add("spin-jackpot");
+}
+// natychmiastowy koniec: wszystkie karty staja na JUZ wylosowanych nazwiskach (nic sie nie losuje ponownie)
+function spinFinishAll(){
+  if(!SPIN) return;
+  SPIN.live.forEach(s => { if(!s.done) spinLand(s); });
+  SPIN = null;
+}
 function spinFrame(now){   // zwraca true, gdy trzeba dalej krecic
   if(!SPIN) return false;
   const t = now - SPIN.t0;
+  let current = null;                           // karta, ktora zaraz stanie (do kamery)
   for(const s of SPIN.live){
     if(s.done) continue;
-    const nm = s.card.querySelector(".nm"), meta = s.card.querySelector(".meta");
-    if(t >= s.stop){
-      s.done = true;
-      if(nm){ nm.innerHTML = s.nmHTML; nm.classList.remove("spin-tick"); }   // DOKLADNIE to, co narysowal render()
-      if(meta){ meta.textContent = s.metaTxt; meta.classList.remove("spin-tick"); }
-      s.card.classList.remove("spinning");
-      s.card.classList.add("spin-landed");
-      if(STARS.has(s.p.n)) s.card.classList.add("spin-jackpot");
-      continue;
-    }
+    if(t >= s.stop){ spinLand(s); continue; }
+    if(!current || s.stop < current.stop) current = s;
     if(t >= s.next){
+      const nm = s.card.querySelector(".nm"), meta = s.card.querySelector(".meta");
       const pr = t / s.stop;
       s.next = t + 45 + 170*pr*pr*pr;                // beben zwalnia przed zatrzymaniem
       if(!SPIN.grp) SPIN.grp = {};
       const grp = SPIN.grp[s.p.p] || (SPIN.grp[s.p.p] = DB.filter(x => x.p===s.p.p)), r = grp[rnd(grp.length)];
-      if(nm) nm.textContent = r.n;
+      const isStar = STARS.has(r.n);                 // gwiazda przemyka w bebnie → krotki zielony blysk
+      if(nm) nm.textContent = (isStar ? "★ " : "") + r.n;
       if(meta) meta.textContent = clubLabel(r);
+      s.card.classList.toggle("spin-flash", isStar);
+      if(isStar) s.next = Math.max(s.next, t + 200);
       [nm, meta].forEach(e => { if(!e) return; e.classList.remove("spin-tick"); void e.offsetWidth; e.classList.add("spin-tick"); });
     }
   }
+  // KAMERA: lista zjezdza za losowaniem — karta, ktora staje, trzymana ok. 70% widocznej czesci listy
+  if(SPIN.follow && current){
+    try{
+      const sc = spinScroller();
+      if(sc){
+        const sr = sc.getBoundingClientRect();
+        let visTop = Math.max(sr.top, 0), visBot = Math.min(sr.bottom, window.innerHeight || sr.bottom);
+        const pc = el("s-xad") ? el("s-xad").querySelector(".xad-col-pitch") : null;
+        if(sc===el("s-xad") && pc && getComputedStyle(pc).position==="sticky") visTop = Math.max(visTop, pc.getBoundingClientRect().bottom);
+        const delta = current.card.getBoundingClientRect().bottom - (visTop + (visBot-visTop)*0.7);
+        if(delta > 1) sc.scrollTop += delta*0.18;
+      }
+    }catch(e){}
+  }
   if(t < SPIN.max + 50) return true;
-  SPIN = null; return false;
+  const back = SPIN.follow;
+  SPIN = null;
+  // po ostatniej karcie: krotka pauza i plynny powrot na gore (do bramkarzy)
+  if(back){
+    SPIN_BACK_TIMER = setTimeout(() => { spinScrollTo(spinScroller(), 0, 650); }, SPIN_BACK_PAUSE);
+  }
+  return false;
 }
+let SPIN_BACK_TIMER = 0;
 // kaskada pojawiania kart w puli — dodaje klasę po kolei (CSS robi fade/slide), widocznie od 1. do ostatniego
 function cascadePool(){
   const cards = el("xad-pool") ? el("xad-pool").querySelectorAll(".xad-card") : [];
@@ -495,6 +565,15 @@ function placePlayer(p){
   TARGET_SLOT = null; POS_FILTER = null;                   // po wyborze: zdejmij cel i filtr
   render(true, p.n);                                       // animuj wskoczenie tego zawodnika
   flSaveDraft();
+  // komplet XI → plynnie na gore: cale boisko + pulsujacy LOCK IN (gracz nie musi sam przewijac)
+  if(picked()===11){
+    try{
+      const rm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const sc = spinScroller();
+      if(rm){ if(sc) sc.scrollTop = 0; } else spinScrollTo(sc, 0, 600);
+      const sx = el("s-xad"); if(sc!==sx && sx) sx.scrollTop = 0;
+    }catch(e){}
+  }
 }
 function removeFromSlot(i){
   if(!SLOTS[i].player) return;
@@ -619,7 +698,7 @@ function render(animate, justJumped){
                     '<span class="nm">'+(isStar ? '★ ' : '')+escXad(p.n)+'</span>'+
                     '<span class="meta">'+escXad(clubLabel(p))+'</span>'+
                     '<span class="pos">'+posLabel(p)+'</span>';
-      if(!inXI(p.n)) d.onclick = () => { if(d.classList.contains("spinning")) return; placePlayer(p); };
+      if(!inXI(p.n)) d.onclick = () => { if(d.classList.contains("spinning") || Date.now() < SPIN_IGNORE_CLICK_UNTIL) return; placePlayer(p); };
       poolEl.appendChild(d);
       if(SPIN) spinRegister(d, p);                // losowanie trwa → ta karta dalej sie kreci az do swojego czasu
     });
