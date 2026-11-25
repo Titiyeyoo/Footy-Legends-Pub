@@ -480,12 +480,11 @@ function spinFrame(now){   // zwraca true, gdy trzeba dalej krecic
       const pr = t / s.stop;
       s.next = t + 45 + 170*pr*pr*pr;                // beben zwalnia przed zatrzymaniem
       if(!SPIN.grp) SPIN.grp = {};
-      const grp = SPIN.grp[s.p.p] || (SPIN.grp[s.p.p] = DB.filter(x => x.p===s.p.p)), r = grp[rnd(grp.length)];
-      const isStar = STARS.has(r.n);                 // gwiazda przemyka w bebnie → krotki zielony blysk
-      if(nm) nm.textContent = (isStar ? "★ " : "") + r.n;
+      // W BEBNIE NIE MA GWIAZD (decyzja Pawla 2026-11-25): migajaca gwiazda sugerowala graczom,
+      // ze ja dostana. Gwiazda pojawia sie WYLACZNIE, gdy naprawde wypadnie (zielona na stojacej karcie).
+      const grp = SPIN.grp[s.p.p] || (SPIN.grp[s.p.p] = DB.filter(x => x.p===s.p.p && !STARS.has(x.n))), r = grp[rnd(grp.length)];
+      if(nm) nm.textContent = r.n;
       if(meta) meta.textContent = clubLabel(r);
-      s.card.classList.toggle("spin-flash", isStar);
-      if(isStar) s.next = Math.max(s.next, t + 200);
       [nm, meta].forEach(e => { if(!e) return; e.classList.remove("spin-tick"); void e.offsetWidth; e.classList.add("spin-tick"); });
     }
   }
