@@ -798,9 +798,10 @@ function isDeepCutTV(n){ return !STARS.has(n) && !NARR_NAMES.has(n); }
       try {
         // POTWIERDZENIE Z SAMEGO ZAPISU: .select() zwraca zaktualizowany wiersz w odpowiedzi na UPDATE.
         // Osobny odczyt bywa podawany z CACHE przegladarki (Brave) i pokazywal falszywy blad.
-        const { data: upd, error: uErr } = await sb.from("teams")
-          .update({ ready_round: curRoundNum }).eq("id", TEAM_ID).select("ready_round");
-        let ok = !uErr && Array.isArray(upd) && upd.length > 0 && upd[0].ready_round === curRoundNum;
+        // USZCZELNIENIE 2026-11-25: READY przez bezpieczna funkcje set_ready (sekret druzyny + biezaca runda)
+        const { data: upd, error: uErr } = await sb.rpc("set_ready",
+          { p_team_id: TEAM_ID, p_token: TEAM_TOKEN, p_round: curRoundNum });
+        let ok = !uErr && upd === curRoundNum;
         if (!ok && !uErr){
           // zapas: odczyt kontrolny (gdy API nie zwrocilo wiersza)
           const { data: chk } = await sb.from("teams").select("ready_round").eq("id", TEAM_ID).maybeSingle();
